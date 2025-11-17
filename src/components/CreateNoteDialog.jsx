@@ -48,13 +48,12 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
 
   const handleSave = () => {
     if (saveInProgressRef.current || loading) {
-      console.log(" Save already in progress, ignoring duplicate call");
+      // console.log("Save already in progress, ignoring duplicate call");
       return;
     }
 
     saveInProgressRef.current = true;
     onSave(newNote);
-    setNewNote({ title: "", content: "" });
 
     setTimeout(() => {
       saveInProgressRef.current = false;
@@ -62,7 +61,9 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
   };
 
   const handleClose = () => {
-    setNewNote({ title: "", content: "" });
+    if (!saveInProgressRef.current) {
+      setNewNote({ title: "", content: "" });
+    }
     onClose();
   };
 

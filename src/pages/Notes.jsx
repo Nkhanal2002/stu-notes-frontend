@@ -79,7 +79,7 @@ export default function Notes() {
 
   const handleCreateNote = async (newNote) => {
     if (saveInProgressRef.current) {
-      console.log("[v0] Save already in progress, skipping duplicate call");
+      console.log("Save already in progress, skipping duplicate call");
       return;
     }
 
