@@ -6,7 +6,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [pendingSignup, setPendingSignup] = useState(null);
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   useEffect(() => {
     checkAuthStatus();

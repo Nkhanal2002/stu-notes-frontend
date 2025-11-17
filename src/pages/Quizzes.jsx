@@ -52,7 +52,8 @@ export default function Quizzes() {
   const { user } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   useEffect(() => {
     if (user) {

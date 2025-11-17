@@ -49,7 +49,8 @@ export default function Analytics() {
   const { user } = useAuth();
   const [timeRange, setTimeRange] = useState("all"); // Declare timeRange and setTimeRange
   const [currentPage, setCurrentPage] = useState(1);
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
   const itemsPerPage = 4;
 
   useEffect(() => {

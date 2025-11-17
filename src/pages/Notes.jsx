@@ -28,7 +28,8 @@ export default function Notes() {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 6;
 
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   useEffect(() => {
     if (user) {
