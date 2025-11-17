@@ -59,7 +59,7 @@ export default function Home() {
 
   const stats = [
     { icon: Users, value: "10K+", label: "Active Students" },
-    { icon: Clock, value: "500K+", label: "Hours Transcribed" },
+    { icon: Clock, value: "400K+", label: "Hours Transcribed" },
     { icon: CheckCircle, value: "1M+", label: "Quizzes Generated" },
     { icon: Zap, value: "98%", label: "Accuracy Rate" },
   ];
