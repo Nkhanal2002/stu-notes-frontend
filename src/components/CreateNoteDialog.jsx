@@ -46,6 +46,12 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    if (!isOpen) {
+      setNewNote({ title: "", content: "" });
+    }
+  }, [isOpen]);
+
   const handleSave = () => {
     if (saveInProgressRef.current || loading) {
       // console.log("Save already in progress, ignoring duplicate call");
@@ -61,9 +67,6 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
   };
 
   const handleClose = () => {
-    if (!saveInProgressRef.current) {
-      setNewNote({ title: "", content: "" });
-    }
     onClose();
   };
 
