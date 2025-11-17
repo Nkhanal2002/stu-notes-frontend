@@ -79,13 +79,13 @@ export default function Notes() {
 
   const handleCreateNote = async (newNote) => {
     if (saveInProgressRef.current) {
-      console.log("Save already in progress, skipping duplicate call");
+      console.log("[v0] Save already in progress, skipping duplicate call");
       return;
     }
 
     if (!newNote.title || !newNote.content) {
       toast.error("Please provide both title and content");
-      return;
+      return; // Dialog stays open with content preserved
     }
 
     saveInProgressRef.current = true;
@@ -107,8 +107,8 @@ export default function Notes() {
 
       if (data.success) {
         toast.success("Note created successfully!");
-        setCreateDialogOpen(false);
-        fetchNotes();
+        setCreateDialogOpen(false); // Close dialog first
+        await fetchNotes(); // Then fetch notes
       } else {
         toast.error(data.message || "Failed to create note");
       }
@@ -231,7 +231,7 @@ export default function Notes() {
               My Notes
             </h1>
             <p className="text-muted-foreground">
-              Manage and view both transcribed and manual notes.
+              Organize and manage your study notes
             </p>
           </div>
 

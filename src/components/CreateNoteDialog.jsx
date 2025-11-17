@@ -22,6 +22,7 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
   });
   const saveInProgressRef = useRef(false);
   const [isDark, setIsDark] = useState(false);
+  const [activeTab, setActiveTab] = useState("edit");
 
   useEffect(() => {
     marked.setOptions({
@@ -47,14 +48,16 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
   }, []);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (isOpen) {
+      // Reset to fresh state when dialog opens
       setNewNote({ title: "", content: "" });
+      setActiveTab("edit");
     }
   }, [isOpen]);
 
   const handleSave = () => {
     if (saveInProgressRef.current || loading) {
-      // console.log("Save already in progress, ignoring duplicate call");
+      console.log("[v0] Save already in progress, ignoring duplicate call");
       return;
     }
 
@@ -72,7 +75,7 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl sm:min-w-[72%]">
+      <DialogContent className="max-w-4xl ">
         <DialogHeader>
           <DialogTitle>Create New Note</DialogTitle>
           <DialogDescription>
@@ -95,7 +98,12 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
           </div>
           <div>
             <Label className="mb-2">Content</Label>
-            <Tabs defaultValue="edit" className="w-full">
+            <Tabs
+              defaultValue="edit"
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className="w-full"
+            >
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="edit">Edit</TabsTrigger>
                 <TabsTrigger value="preview">Preview</TabsTrigger>
