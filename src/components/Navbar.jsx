@@ -204,7 +204,7 @@ export default function Navbar() {
                     onClick={() => setIsOpen(false)}
                     className={`flex items-center space-x-2 px-3 py-2 rounded-md text-base font-medium transition-colors ${
                       isActive(item.href)
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary text-white"
                         : "text-muted-foreground hover:text-foreground hover:bg-accent"
                     }`}
                   >

@@ -83,8 +83,8 @@ export default function ViewDialog({
       <DialogContent
         className={
           itemType === "note"
-            ? "min-w-[72%] max-w-none"
-            : "min-w-[72%] max-w-4xl"
+            ? "w-[90%] sm:min-w-[72%] max-w-none"
+            : "w-[90%] sm:min-w-[72%] max-w-4xl"
         }
       >
         <DialogHeader>

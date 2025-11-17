@@ -106,7 +106,7 @@ export default function EditDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="max-w-4xl sm:min-w-[72%]">
+      <DialogContent className="w-[90%] max-w-4xl sm:min-w-[72%]">
         <DialogHeader>
           <DialogTitle>
             Edit {itemType === "note" ? "Note" : "Transcript"}

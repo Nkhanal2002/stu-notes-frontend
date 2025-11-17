@@ -51,7 +51,7 @@ export default function Pagination({
 
   return (
     <div className="flex items-center justify-between px-2 py-4">
-      <div className="text-xs sm:text-sm text-muted-foreground mr-2">
+      <div className="hidden sm:block text-xs sm:text-sm text-muted-foreground mr-2">
         Showing {startItem} to {endItem} of {totalItems} {itemName}
       </div>
 

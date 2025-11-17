@@ -491,7 +491,7 @@ export default function Analytics() {
                                   ? "secondary"
                                   : "destructive"
                               }
-                              className="text-sm"
+                              className="text-sm text-white"
                             >
                               {quiz.score}%
                             </Badge>
