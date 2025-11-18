@@ -26,10 +26,26 @@ export default function Notes() {
   const [editingNote, setEditingNote] = useState({ title: "", content: "" });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 6;
+  const [itemsPerPage, setItemsPerPage] = useState(6);
 
   const backendURL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768) {
+        setItemsPerPage(3);
+      } else {
+        setItemsPerPage(6);
+      }
+    };
+
+    handleResize();
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     if (user) {
@@ -80,13 +96,12 @@ export default function Notes() {
 
   const handleCreateNote = async (newNote) => {
     if (saveInProgressRef.current) {
-      console.log("[v0] Save already in progress, skipping duplicate call");
       return;
     }
 
     if (!newNote.title || !newNote.content) {
       toast.error("Please provide both title and content");
-      return; // Dialog stays open with content preserved
+      return;
     }
 
     saveInProgressRef.current = true;
@@ -108,8 +123,8 @@ export default function Notes() {
 
       if (data.success) {
         toast.success("Note created successfully!");
-        setCreateDialogOpen(false); // Close dialog first
-        await fetchNotes(); // Then fetch notes
+        setCreateDialogOpen(false);
+        await fetchNotes();
       } else {
         toast.error(data.message || "Failed to create note");
       }
@@ -220,10 +235,10 @@ export default function Notes() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm]);
+  }, [searchTerm, itemsPerPage]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[80vh]">
+    <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[calc(100vh-8rem)] flex flex-col">
       <div className="mb-8">
         <div className="flex-col sm:flex sm:flex-row justify-between items-center mb-4">
           <div>
@@ -259,29 +274,45 @@ export default function Notes() {
       </div>
 
       {/* Notes Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
-        {paginatedNotes.map((note) => (
-          <NoteCard
-            key={note.id}
-            note={note}
-            onView={handleViewNote}
-            onEdit={handleEditNote}
-            onTakeQuiz={handleTakeQuiz}
-            onDelete={handleDeleteNote}
-            deleteLoading={deleteLoading}
-          />
-        ))}
+      <div className="flex-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 auto-rows-max">
+          {paginatedNotes.map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              onView={handleViewNote}
+              onEdit={handleEditNote}
+              onTakeQuiz={handleTakeQuiz}
+              onDelete={handleDeleteNote}
+              deleteLoading={deleteLoading}
+            />
+          ))}
+        </div>
+
+        {filteredNotes.length === 0 && (
+          <div className="text-center py-12">
+            <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <h3 className="text-lg font-medium mb-2">No notes found</h3>
+            <p className="text-muted-foreground mb-4">
+              {searchTerm
+                ? "Try adjusting your search criteria"
+                : "Create your first note to get started"}
+            </p>
+          </div>
+        )}
       </div>
 
       {filteredNotes.length > itemsPerPage && (
-        <Pagination
-          currentPage={currentPage}
-          totalPages={totalPages}
-          onPageChange={setCurrentPage}
-          itemsPerPage={itemsPerPage}
-          totalItems={filteredNotes.length}
-          itemName="notes"
-        />
+        <div className="mt-8 mb-4">
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={setCurrentPage}
+            itemsPerPage={itemsPerPage}
+            totalItems={filteredNotes.length}
+            itemName="notes"
+          />
+        </div>
       )}
 
       <CreateNoteDialog
@@ -315,18 +346,6 @@ export default function Notes() {
         contentProperty="content"
         idProperty="id"
       />
-
-      {filteredNotes.length === 0 && (
-        <div className="text-center py-12">
-          <FileText className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h3 className="text-lg font-medium mb-2">No notes found</h3>
-          <p className="text-muted-foreground mb-4">
-            {searchTerm
-              ? "Try adjusting your search criteria"
-              : "Create your first note to get started"}
-          </p>
-        </div>
-      )}
     </div>
   );
 }

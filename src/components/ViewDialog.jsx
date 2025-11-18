@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Edit, Play } from "lucide-react";
+import { Calendar, Edit, Play, X } from "lucide-react";
 import { marked } from "marked";
 import { useMemo } from "react";
 
@@ -17,16 +17,16 @@ export default function ViewDialog({
   item,
   onEdit,
   onTakeQuiz,
-  itemType = "note", // "note" or "transcript"
+  itemType = "note",
   titleProperty = "title",
   contentProperty = "content",
   dateProperty = "date",
   typeProperty = "type",
 }) {
-  // Configure marked options for better rendering
   marked.setOptions({
-    breaks: true, // Convert \n to <br>
-    gfm: true, // GitHub Flavored Markdown
+    breaks: true,
+    gfm: true,
+    pedantic: false,
   });
 
   const contentHtml = useMemo(() => {
@@ -41,7 +41,6 @@ export default function ViewDialog({
     const dateValue = item[dateProperty];
     if (!dateValue) return "Unknown date";
 
-    // If it's already a formatted date string (like from notes), use it directly
     if (
       typeof dateValue === "string" &&
       dateValue.match(/^\d{4}-\d{2}-\d{2}$/)
@@ -50,7 +49,6 @@ export default function ViewDialog({
     }
 
     try {
-      // Handle both string timestamps and Date objects
       const date = new Date(dateValue);
       if (isNaN(date.getTime())) {
         return "Invalid date";
@@ -83,8 +81,8 @@ export default function ViewDialog({
       <DialogContent
         className={
           itemType === "note"
-            ? " w-[90%] h-[67%] sm:h-[80%] sm:min-w-[72%] sm:max-w-none"
-            : " w-[90%] h-[67%] sm:h-[80%] sm:min-w-[72%] sm:max-w-4xl"
+            ? "w-[90%] h-[72%] sm:h-[80%] sm:min-w-[72%] sm:max-w-none"
+            : "w-[90%] h-[72%] sm:h-[80%] sm:min-w-[72%] sm:max-w-4xl"
         }
       >
         <DialogHeader>
@@ -137,45 +135,77 @@ export default function ViewDialog({
           }
         >
           <div
-            className="prose prose-sm max-w-none dark:prose-invert 
-              prose-headings:mt-8 prose-headings:mb-6 prose-headings:font-semibold
-              prose-h1:text-3xl prose-h1:mt-10 prose-h1:mb-6
-              prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-5
-              prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-4
-              prose-p:my-6 prose-p:leading-8
-              prose-ul:my-6 prose-ul:list-disc prose-ul:pl-6 prose-ul:space-y-3
-              prose-ol:my-6 prose-ol:list-decimal prose-ol:pl-6 prose-ol:space-y-3
-              prose-li:my-3 prose-li:leading-7
-              prose-strong:font-semibold prose-strong:text-foreground
-              prose-em:italic
-              prose-code:bg-muted prose-code:px-1 prose-code:py-0.5 prose-code:rounded
-              prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg prose-pre:my-6
-              prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic prose-blockquote:my-6
-              prose-hr:my-8"
+            className="prose prose-base max-w-none dark:prose-invert 
+              prose-headings:font-bold prose-headings:tracking-tight
+              prose-h1:text-4xl prose-h1:mt-8 prose-h1:mb-5 prose-h1:leading-tight
+              prose-h2:text-3xl prose-h2:mt-7 prose-h2:mb-4 prose-h2:leading-snug
+              prose-h3:text-2xl prose-h3:mt-6 prose-h3:mb-3 prose-h3:leading-snug
+              prose-h4:text-xl prose-h4:mt-5 prose-h4:mb-3
+              prose-p:my-4 prose-p:leading-7 prose-p:text-base
+              prose-ul:my-5 prose-ul:list-disc prose-ul:pl-6 prose-ul:space-y-2
+              prose-ol:my-5 prose-ol:list-decimal prose-ol:pl-6 prose-ol:space-y-2
+              prose-li:my-1.5 prose-li:leading-7 prose-li:pl-1
+              prose-li:marker:text-primary prose-li:marker:font-bold
+              prose-strong:font-bold prose-strong:text-foreground
+              prose-em:italic prose-em:text-foreground
+              prose-code:bg-muted prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:text-sm prose-code:font-mono
+              prose-pre:bg-muted prose-pre:p-5 prose-pre:rounded-lg prose-pre:my-6 prose-pre:overflow-x-auto
+              prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-6 prose-blockquote:italic prose-blockquote:my-6 prose-blockquote:py-2
+              prose-hr:my-8 prose-hr:border-border
+              prose-a:text-primary prose-a:underline prose-a:font-medium
+              [&_p+p]:mt-4
+              [&_h1+p]:mt-4
+              [&_h2+p]:mt-3
+              [&_h3+p]:mt-3
+              [&_ul+p]:mt-5
+              [&_ol+p]:mt-5
+              [&_p+ul]:mt-4
+              [&_p+ol]:mt-4
+              [&_ul]:block
+              [&_ol]:block
+              [&_li]:block"
             dangerouslySetInnerHTML={{ __html: contentHtml }}
           />
         </div>
 
         <div className="flex gap-2 pt-4 border-t">
-          {showEditButton && (
-            <Button
-              onClick={() => onEdit(item)}
-              variant="outline"
-              className="flex-1"
-            >
-              <Edit className="h-4 w-4 mr-2" />
-              Edit Note
-            </Button>
+          {showEditButton ? (
+            <>
+              <Button
+                onClick={() => onEdit(item)}
+                variant="outline"
+                className="flex-1"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Edit Note
+              </Button>
+              <Button
+                onClick={() => onTakeQuiz(item)}
+                className="flex-1 bg-primary hover:bg-green-600 text-white"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Take Quiz
+              </Button>
+              <Button onClick={onClose} variant="outline" className="flex-1">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                onClick={() => onTakeQuiz(item)}
+                className="flex-1 bg-primary hover:bg-green-600 text-white"
+              >
+                <Play className="h-4 w-4 mr-2" />
+                Take Quiz
+              </Button>
+              <Button onClick={onClose} variant="outline" className="flex-1">
+                <X className="h-4 w-4 mr-2" />
+                Cancel
+              </Button>
+            </>
           )}
-          <Button
-            onClick={() => onTakeQuiz(item)}
-            className={`${
-              showEditButton ? "flex-1" : "w-full"
-            } bg-primary hover:bg-green-600 text-white`}
-          >
-            <Play className="h-4 w-4 mr-2" />
-            Take Quiz
-          </Button>
         </div>
       </DialogContent>
     </Dialog>

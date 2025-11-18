@@ -41,12 +41,13 @@ export default function Transcribe() {
   });
 
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 3;
+  const [itemsPerPage, setItemsPerPage] = useState(3);
 
   const intervalRef = useRef();
   const { user } = useAuth();
   const navigate = useNavigate();
-  import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   const {
     transcript,
@@ -189,9 +190,9 @@ export default function Transcribe() {
             // Clean markdown code blocks if present
             let cleanQuizData = data.quiz.trim();
             cleanQuizData = cleanQuizData
-              .replace(/^```json\s*/i, "")
-              .replace(/^```\s*/, "")
-              .replace(/\s*```$/g, "")
+              .replace(/^\`\`\`json\s*/i, "")
+              .replace(/^\`\`\`\s*/, "")
+              .replace(/\s*\`\`\`$/g, "")
               .trim();
             quizData = JSON.parse(cleanQuizData);
           } else {
@@ -362,6 +363,16 @@ export default function Transcribe() {
     setRecordingTime(0);
     setTitle("");
   };
+
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(3);
+    };
+
+    handleResize(); // Set initial value
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   if (!browserSupportsSpeechRecognition) {
     return (
@@ -534,22 +545,22 @@ export default function Transcribe() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="flex flex-col">
           <CardHeader>
             <CardTitle>Transcribed Notes</CardTitle>
             <CardDescription>
               Your previously recorded lectures as transcribed and clean notes.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="flex-1 flex flex-col">
             {savedTranscripts.length === 0 ? (
               <p className="text-muted-foreground text-center py-8">
-                No saved transcribed notes yet. Start recording to create your
-                first transcript!
+                No saved transcripts yet. Start recording to create your first
+                transcript!
               </p>
             ) : (
-              <div className="space-y-4">
-                <div className="grid grid-cols-1 gap-4 auto-rows-max">
+              <div className="flex flex-col flex-1">
+                <div className="grid grid-cols-1 gap-4 auto-rows-max flex-1">
                   {paginatedTranscripts.map((transcript) => (
                     <TranscriptCard
                       key={transcript._id}
@@ -565,14 +576,16 @@ export default function Transcribe() {
                 </div>
 
                 {savedTranscripts.length > itemsPerPage && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    itemsPerPage={itemsPerPage}
-                    totalItems={savedTranscripts.length}
-                    itemName="transcripts"
-                  />
+                  <div className="mt-6 mb-2">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                      itemsPerPage={itemsPerPage}
+                      totalItems={savedTranscripts.length}
+                      itemName="transcripts"
+                    />
+                  </div>
                 )}
               </div>
             )}

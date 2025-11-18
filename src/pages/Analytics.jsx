@@ -47,11 +47,11 @@ export default function Analytics() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const { user } = useAuth();
-  const [timeRange, setTimeRange] = useState("all"); // Declare timeRange and setTimeRange
+  const [timeRange, setTimeRange] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(4);
   const backendURL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
-  const itemsPerPage = 4;
 
   useEffect(() => {
     const fetchQuizData = async () => {
@@ -126,6 +126,20 @@ export default function Analytics() {
     fetchQuizData();
   }, [user]);
 
+  useEffect(() => {
+    const handleResize = () => {
+      setItemsPerPage(window.innerWidth >= 768 ? 4 : 3);
+    };
+
+    handleResize(); // Set initial value
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
   const filteredQuizData = quizData.filter((quiz) => {
     const quizDate = new Date(quiz.createdAt);
     const now = new Date();
@@ -176,16 +190,24 @@ export default function Analytics() {
   }));
 
   const barChartData = filteredQuizData.reduce((acc, quiz) => {
-    const scoreRange = Math.floor(quiz.score / 10) * 10;
-    const range = `${scoreRange}-${scoreRange + 9}%`;
+    const cappedScore = Math.min(quiz.score, 100);
+    const scoreRange = Math.floor(cappedScore / 10) * 10;
+    const range =
+      cappedScore === 100 ? "90-100%" : `${scoreRange}-${scoreRange + 9}%`;
     acc[range] = (acc[range] || 0) + 1;
     return acc;
   }, {});
 
-  const barData = Object.entries(barChartData).map(([range, count]) => ({
-    range,
-    count,
-  }));
+  // Sort the ranges in ascending order
+  const barData = Object.entries(barChartData)
+    .sort(([rangeA], [rangeB]) => {
+      const getStartValue = (range) => parseInt(range.split("-")[0]);
+      return getStartValue(rangeA) - getStartValue(rangeB);
+    })
+    .map(([range, count]) => ({
+      range,
+      count,
+    }));
 
   const pieData = [
     {
@@ -409,12 +431,13 @@ export default function Analytics() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="range" />
                       <YAxis />
-                      <Tooltip />
+                      <Tooltip cursor={false} />
                       <Legend />
                       <Bar
                         dataKey="count"
                         fill="#3b82f6"
                         name="Number of Quizzes"
+                        activeBar={{ fill: "#60a5fa" }}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -469,77 +492,84 @@ export default function Analytics() {
             </Card>
 
             {/* Recent Quizzes */}
-            <Card className="lg:col-span-2">
+            <Card className="lg:col-span-2 flex flex-col">
               <CardHeader>
                 <CardTitle>Recent Quiz Results</CardTitle>
                 <CardDescription>Your latest quiz performances</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  {paginatedQuizzes.length > 0 ? (
-                    paginatedQuizzes.map((quiz, idx) => (
-                      <div
-                        key={idx}
-                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border gap-2 sm:gap-4"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="flex-shrink-0">
-                            <Badge
-                              variant={
-                                quiz.score >= 80
-                                  ? "default"
-                                  : quiz.score >= 60
-                                  ? "secondary"
-                                  : "destructive"
-                              }
-                              className="text-sm text-white"
-                            >
-                              {quiz.score}%
-                            </Badge>
+              <CardContent className="flex-1 flex flex-col">
+                {/* Quiz results list with flex-1 to push pagination down */}
+                <div className="flex flex-col flex-1">
+                  {/* Quiz results list with flex-1 to push pagination down */}
+                  <div className="space-y-3 flex-1">
+                    {paginatedQuizzes.length > 0 ? (
+                      paginatedQuizzes.map((quiz, idx) => (
+                        <div
+                          key={idx}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border gap-2 sm:gap-4"
+                        >
+                          <div className="flex items-center gap-3">
+                            <div className="flex-shrink-0">
+                              <Badge
+                                variant={
+                                  quiz.score >= 80
+                                    ? "default"
+                                    : quiz.score >= 60
+                                    ? "secondary"
+                                    : "destructive"
+                                }
+                                className="text-sm"
+                              >
+                                {quiz.score}%
+                              </Badge>
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-medium truncate sm:whitespace-normal">
+                                {quiz.title}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {new Date(quiz.createdAt).toLocaleDateString()}
+                                <span className="sm:hidden">
+                                  {" "}
+                                  •{" "}
+                                  {new Date(quiz.createdAt).toLocaleTimeString(
+                                    [],
+                                    {
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    }
+                                  )}
+                                </span>
+                              </p>
+                            </div>
                           </div>
-                          <div className="min-w-0 flex-1">
-                            <p className="font-medium truncate sm:whitespace-normal">
-                              {quiz.title}
-                            </p>
-                            <p className="text-sm text-muted-foreground">
-                              {new Date(quiz.createdAt).toLocaleDateString()}
-                              <span className="sm:hidden">
-                                {" "}
-                                •{" "}
-                                {new Date(quiz.createdAt).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
-                              </span>
+                          <div className="hidden sm:block text-right flex-shrink-0">
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(quiz.createdAt).toLocaleTimeString()}
                             </p>
                           </div>
                         </div>
-                        <div className="hidden sm:block text-right flex-shrink-0">
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(quiz.createdAt).toLocaleTimeString()}
-                          </p>
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-center text-muted-foreground">
-                      No quizzes in this time range
-                    </p>
+                      ))
+                    ) : (
+                      <p className="text-center text-muted-foreground">
+                        No quizzes in this time range
+                      </p>
+                    )}
+                  </div>
+
+                  {recentQuizzes.length > itemsPerPage && (
+                    <div className="mt-6 mb-2">
+                      <Pagination
+                        currentPage={currentPage}
+                        totalPages={totalPages}
+                        onPageChange={setCurrentPage}
+                        itemsPerPage={itemsPerPage}
+                        totalItems={recentQuizzes.length}
+                        itemName="quizzes"
+                      />
+                    </div>
                   )}
                 </div>
-                {recentQuizzes.length > itemsPerPage && (
-                  <Pagination
-                    currentPage={currentPage}
-                    totalPages={totalPages}
-                    onPageChange={setCurrentPage}
-                    itemsPerPage={itemsPerPage}
-                    totalItems={recentQuizzes.length}
-                    itemName="quizzes"
-                  />
-                )}
               </CardContent>
             </Card>
           </div>

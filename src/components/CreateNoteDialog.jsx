@@ -14,6 +14,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { githubDark, githubLight } from "@uiw/codemirror-theme-github";
 import { marked } from "marked";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { X } from "lucide-react";
 
 export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
   const [newNote, setNewNote] = useState({
@@ -75,7 +76,7 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
-      <DialogContent className="w-[90%] h-[67%] sm:h-[80%] max-w-4xl sm:min-w-[72%] ">
+      <DialogContent className="w-[90%] h-[72%] sm:h-[80%] max-w-4xl sm:min-w-[72%]">
         <DialogHeader>
           <DialogTitle>Create New Note</DialogTitle>
           <DialogDescription>
@@ -143,13 +144,24 @@ export default function CreateNoteDialog({ isOpen, onClose, onSave, loading }) {
             </Tabs>
           </div>
         </div>
-        <Button
-          onClick={handleSave}
-          disabled={loading || saveInProgressRef.current}
-          className="w-full text-white mt-4"
-        >
-          {loading ? "Creating..." : "Create Note"}
-        </Button>
+        <div className="flex gap-3 mt-4">
+          <Button
+            onClick={handleClose}
+            variant="outline"
+            className="flex-1"
+            disabled={loading || saveInProgressRef.current}
+          >
+            <X className="w-4 h-4 mr-2" />
+            Cancel
+          </Button>
+          <Button
+            onClick={handleSave}
+            disabled={loading || saveInProgressRef.current}
+            className="flex-1 text-white"
+          >
+            {loading ? "Creating..." : "Create Note"}
+          </Button>
+        </div>
       </DialogContent>
     </Dialog>
   );
