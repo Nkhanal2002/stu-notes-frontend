@@ -236,26 +236,7 @@ export default function Navbar() {
                         </span>
                       </div>
                     </div>
-                    {/* <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setIsOpen(false);
-                      }}
-                    >
-                      <User className="mr-2 h-4 w-4" />
-                      Profile
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      className="w-full justify-start"
-                      onClick={() => {
-                        setIsOpen(false);
-                      }}
-                    >
-                      <Settings className="mr-2 h-4 w-4" />
-                      Settings
-                    </Button> */}
+
                     <Button
                       variant="ghost"
                       className="w-full justify-start"

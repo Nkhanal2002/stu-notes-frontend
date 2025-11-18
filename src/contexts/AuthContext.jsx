@@ -86,34 +86,37 @@ export function AuthProvider({ children }) {
       headers: {
         "Content-Type": "application/json",
       },
-      credentials: "include", // Include cookies
+      credentials: "include",
       body: JSON.stringify({ name, email, password }),
     });
 
     const data = await response.json();
 
     if (!response.ok || !data.success) {
-      throw new Error(data.message || "Failed to send OTP");
+      throw new Error(data.message || "Failed to create account");
     }
 
-    // Store pending signup data for verification step
-    setPendingSignup({ name, email, password });
+    setPendingSignup({
+      name,
+      email,
+      password,
+    });
 
     return {
       success: true,
-      message: data.message || "OTP sent to your email",
+      message: data.message || "Verification code sent to your email",
     };
   };
 
   const verifySignUp = async (otp) => {
-    // console.log(" verifySignUp called with OTP:", otp);
+    console.log("[v0] verifySignUp called with OTP:", otp);
 
     if (!pendingSignup) {
-      console.log(" ERROR: No pending signup found");
+      console.log("[v0] ERROR: No pending signup found");
       throw new Error("No pending signup found. Please request OTP first.");
     }
 
-    // console.log(" Pending signup data:", { email: pendingSignup.email });
+    console.log("[v0] Pending signup data:", { email: pendingSignup.email });
 
     const response = await fetch(`${backendURL}/api/auth/verifySignUp`, {
       method: "POST",
@@ -127,18 +130,18 @@ export function AuthProvider({ children }) {
       }),
     });
 
-    // console.log(" Response status:", response.status);
-    // console.log(" Response ok:", response.ok);
+    console.log("[v0] Response status:", response.status);
+    console.log("[v0] Response ok:", response.ok);
 
     const data = await response.json();
-    // console.log(" Response data:", data);
+    console.log("[v0] Response data:", data);
 
     if (!data.success) {
-      console.log(" ERROR: Backend returned success=false");
+      console.log("[v0] ERROR: Backend returned success=false");
       throw new Error(data.message || "OTP verification failed");
     }
 
-    // console.log(" Verification successful, user data:", data.user);
+    console.log("[v0] Verification successful, user data:", data.user);
 
     if (data.user) {
       const userData = {
@@ -147,12 +150,12 @@ export function AuthProvider({ children }) {
         email: data.user.email,
         avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${data.user.name}`,
       };
-      console.log(" Setting user state:", userData);
+      console.log("[v0] Setting user state:", userData);
       setUser(userData);
     }
 
     setPendingSignup(null); // Clear pending signup data
-    // console.log(" Cleared pending signup");
+    console.log("[v0] Cleared pending signup");
 
     return {
       success: true,
@@ -176,14 +179,14 @@ export function AuthProvider({ children }) {
 
   const signOut = async () => {
     try {
-      // console.log("Attempting to sign out...");
+      console.log("Attempting to sign out...");
 
       await fetch(`${backendURL}/api/auth/signOut`, {
         method: "GET",
         credentials: "include",
       });
 
-      // console.log("Backend signOut called successfully");
+      console.log("Backend signOut called successfully");
     } catch (error) {
       console.error("Sign out error:", error);
     } finally {
@@ -193,7 +196,7 @@ export function AuthProvider({ children }) {
       localStorage.clear();
       sessionStorage.clear();
 
-      // console.log("User state and storage cleared completely");
+      console.log("User state and storage cleared completely");
     }
   };
 

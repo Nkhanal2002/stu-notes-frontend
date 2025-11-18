@@ -113,7 +113,8 @@ export default function SignUp() {
         formData.password
       );
 
-      toast.success("Verification code sent to your email!");
+      toast.success("Verification code sent! Please check your email.");
+
       navigate("/verify-email", {
         state: {
           email: formData.email,

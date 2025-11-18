@@ -19,7 +19,7 @@ export default function VerifyEmail() {
   const [otp, setOtp] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
   const [isResending, setIsResending] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes
+  const [timeLeft, setTimeLeft] = useState(300);
   const inputRefs = useRef([]);
 
   const navigate = useNavigate();
@@ -65,6 +65,21 @@ export default function VerifyEmail() {
   const handleKeyDown = (index, e) => {
     if (e.key === "Backspace" && !otp[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handlePaste = (e) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").trim();
+
+    // Only process if it's a 6-digit number
+    if (/^\d{6}$/.test(pastedData)) {
+      const digits = pastedData.split("");
+      setOtp(digits);
+      // Focus the last input after pasting
+      inputRefs.current[5]?.focus();
+    } else {
+      toast.error("Please paste a valid 6-digit code");
     }
   };
 
@@ -162,6 +177,7 @@ export default function VerifyEmail() {
                       value={digit}
                       onChange={(e) => handleOtpChange(index, e.target.value)}
                       onKeyDown={(e) => handleKeyDown(index, e)}
+                      onPaste={handlePaste}
                       className="w-12 h-12 text-center text-lg font-semibold"
                       disabled={isLoading}
                     />
