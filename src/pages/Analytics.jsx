@@ -131,7 +131,7 @@ export default function Analytics() {
       setItemsPerPage(window.innerWidth >= 768 ? 4 : 3);
     };
 
-    handleResize(); // Set initial value
+    handleResize();
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
@@ -190,8 +190,10 @@ export default function Analytics() {
   }));
 
   const barChartData = filteredQuizData.reduce((acc, quiz) => {
+    // Cap score at 100 to avoid invalid ranges
     const cappedScore = Math.min(quiz.score, 100);
     const scoreRange = Math.floor(cappedScore / 10) * 10;
+    // Special handling for perfect scores
     const range =
       cappedScore === 100 ? "90-100%" : `${scoreRange}-${scoreRange + 9}%`;
     acc[range] = (acc[range] || 0) + 1;
@@ -320,58 +322,64 @@ export default function Analytics() {
       ) : (
         <>
           {/* Metrics Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8">
             <Card className="border-l-4 border-l-primary">
-              <CardContent className="p-6">
+              <CardContent className="px-4 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground">
                       Total Quizzes
                     </p>
-                    <p className="text-2xl font-bold">{totalQuizzes}</p>
+                    <p className="text-base sm:text-xl md:text-2xl font-bold">
+                      {totalQuizzes}
+                    </p>
                   </div>
-                  <BookOpen className="h-8 w-8 text-primary" />
+                  <BookOpen className="h-6 w-6 md:h-8 md:w-8 text-primary" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-chart-2">
-              <CardContent className="p-6">
+              <CardContent className="px-4 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground">
                       Average Score
                     </p>
-                    <p className="text-2xl font-bold">{averageScore}%</p>
+                    <p className="text-base sm:text-xl md:text-2xl font-bold">
+                      {averageScore}%
+                    </p>
                   </div>
-                  <Target className="h-8 w-8 text-chart-2" />
+                  <Target className="h-6 w-6 md:h-8 md:w-8 text-chart-2" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-chart-3">
-              <CardContent className="p-6">
+              <CardContent className="px-4 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground">
                       Highest Score
                     </p>
-                    <p className="text-2xl font-bold">{highestScore}%</p>
+                    <p className="text-base sm:text-xl md:text-2xl font-bold">
+                      {highestScore}%
+                    </p>
                   </div>
-                  <Award className="h-8 w-8 text-chart-3" />
+                  <Award className="h-6 w-6 md:h-8 md:w-8 text-chart-3" />
                 </div>
               </CardContent>
             </Card>
 
             <Card className="border-l-4 border-l-chart-4">
-              <CardContent className="p-6">
+              <CardContent className="px-4 sm:p-4 md:p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-muted-foreground">
+                    <p className="text-xs md:text-sm font-medium text-muted-foreground">
                       Improvement
                     </p>
                     <div className="flex items-center gap-2">
-                      <p className="text-2xl font-bold">
+                      <p className="text-base sm:text-xl md:text-2xl font-bold">
                         {Math.abs(improvementTrend)}%
                       </p>
                       {improvementTrend > 0 ? (
@@ -381,7 +389,7 @@ export default function Analytics() {
                       ) : null}
                     </div>
                   </div>
-                  <Clock className="h-8 w-8 text-chart-4" />
+                  <Clock className="h-6 w-6 md:h-8 md:w-8 text-chart-4" />
                 </div>
               </CardContent>
             </Card>
@@ -398,7 +406,7 @@ export default function Analytics() {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineChartData}>
+                    <LineChart data={lineChartData} className="ml-[-1.5rem]">
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="name" />
                       <YAxis domain={[0, 100]} />
@@ -427,9 +435,19 @@ export default function Analytics() {
               <CardContent>
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={barData}>
+                    <BarChart
+                      data={barData}
+                      margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+                    >
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="range" />
+                      <XAxis
+                        dataKey="range"
+                        angle={-45}
+                        textAnchor="end"
+                        height={80}
+                        interval={0}
+                        tick={{ fontSize: 14 }}
+                      />
                       <YAxis />
                       <Tooltip cursor={false} />
                       <Legend />
@@ -438,6 +456,7 @@ export default function Analytics() {
                         fill="#3b82f6"
                         name="Number of Quizzes"
                         activeBar={{ fill: "#60a5fa" }}
+                        maxBarSize={60}
                       />
                     </BarChart>
                   </ResponsiveContainer>
