@@ -81,11 +81,11 @@ export default function ViewDialog({
       <DialogContent
         className={
           itemType === "note"
-            ? "w-[90%] h-[72%] sm:h-[80%] sm:min-w-[72%] sm:max-w-none"
-            : "w-[90%] h-[72%] sm:h-[80%] sm:min-w-[72%] sm:max-w-4xl"
+            ? "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:min-w-[72%] sm:max-w-none flex flex-col"
+            : "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:min-w-[72%] sm:max-w-4xl flex flex-col"
         }
       >
-        <DialogHeader>
+        <DialogHeader className="flex-shrink-0">
           {itemType === "note" ? (
             <>
               <DialogTitle className="text-2xl flex items-start">
@@ -130,8 +130,8 @@ export default function ViewDialog({
         <div
           className={
             itemType === "note"
-              ? "overflow-y-auto max-h-[70vh] pr-4"
-              : "overflow-y-auto max-h-[50vh] pr-2"
+              ? "overflow-y-auto flex-1 pr-4 min-h-0"
+              : "overflow-y-auto flex-1 pr-2 min-h-0"
           }
         >
           <div
@@ -168,25 +168,31 @@ export default function ViewDialog({
           />
         </div>
 
-        <div className="flex gap-2 pt-4 border-t">
+        <div className="flex gap-2 pt-4 border-t flex-shrink-0 mt-auto">
           {showEditButton ? (
             <>
+              <div className="flex gap-2 flex-1 sm:flex-initial">
+                <Button
+                  onClick={() => onEdit(item)}
+                  variant="outline"
+                  className="flex-1 sm:flex-initial sm:min-w-[120px]"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Edit Note
+                </Button>
+                <Button
+                  onClick={() => onTakeQuiz(item)}
+                  className="flex-1 sm:flex-initial sm:min-w-[120px] bg-primary hover:bg-green-600 text-white"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Take Quiz
+                </Button>
+              </div>
               <Button
-                onClick={() => onEdit(item)}
+                onClick={onClose}
                 variant="outline"
-                className="flex-1"
+                className="hidden sm:flex sm:ml-auto sm:min-w-[100px]"
               >
-                <Edit className="h-4 w-4 mr-2" />
-                Edit Note
-              </Button>
-              <Button
-                onClick={() => onTakeQuiz(item)}
-                className="flex-1 bg-primary hover:bg-green-600 text-white"
-              >
-                <Play className="h-4 w-4 mr-2" />
-                Take Quiz
-              </Button>
-              <Button onClick={onClose} variant="outline" className="flex-1">
                 <X className="h-4 w-4 mr-2" />
                 Cancel
               </Button>

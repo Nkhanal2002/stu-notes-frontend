@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -48,6 +48,7 @@ export default function Quizzes() {
   const [contentQuizLoading, setContentQuizLoading] = useState(false);
   const [quizMode, setQuizMode] = useState(null);
   const [showQuestionNav, setShowQuestionNav] = useState(false);
+  const isCancelledRef = useRef(false);
 
   const { user } = useAuth();
   const location = useLocation();
@@ -93,6 +94,7 @@ export default function Quizzes() {
 
     setQuizMode("ai");
     setLoading(true);
+    isCancelledRef.current = false;
 
     try {
       const selectedNote = notes.find((note) => note.title === selectedSource);
@@ -124,12 +126,22 @@ export default function Quizzes() {
         }),
       });
 
+      if (isCancelledRef.current) {
+        console.log(" Quiz generation was cancelled, aborting");
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const backendResponse = await response.json();
       console.log(" Backend response object:", backendResponse);
+
+      if (isCancelledRef.current) {
+        console.log(" Quiz generation was cancelled, aborting");
+        return;
+      }
 
       let quizData;
       if (backendResponse.quiz && Array.isArray(backendResponse.quiz)) {
@@ -138,9 +150,9 @@ export default function Quizzes() {
         let cleanQuizData = backendResponse.quiz.trim();
 
         cleanQuizData = cleanQuizData
-          .replace(/^```json\s*/i, "")
-          .replace(/^```\s*/, "")
-          .replace(/\s*```$/g, "")
+          .replace(/^\`\`\`json\s*/i, "")
+          .replace(/^\`\`\`\s*/, "")
+          .replace(/\s*\`\`\`$/g, "")
           .trim();
 
         console.log(" Cleaned quiz data from backend:", cleanQuizData);
@@ -268,8 +280,13 @@ export default function Quizzes() {
         );
       }
 
+      if (isCancelledRef.current) {
+        console.log(" Quiz generation was cancelled, not displaying quiz");
+        return;
+      }
+
       setGeneratedQuiz({
-        title: selectedSource, // Remove "AI Quiz: " prefix to match note title
+        title: selectedSource,
         questions: formattedQuestions,
       });
 
@@ -278,12 +295,14 @@ export default function Quizzes() {
         `AI Quiz generated successfully! ${formattedQuestions.length} questions created.`
       );
     } catch (error) {
-      console.error(" Error in generateQuiz:", error);
-      console.error(" Error details:", {
-        message: error.message,
-        stack: error.stack,
-      });
-      toast.error(`Failed to generate quiz: ${error.message}`);
+      if (!isCancelledRef.current) {
+        console.error(" Error in generateQuiz:", error);
+        console.error(" Error details:", {
+          message: error.message,
+          stack: error.stack,
+        });
+        toast.error(`Failed to generate quiz: ${error.message}`);
+      }
     } finally {
       setLoading(false);
     }
@@ -291,6 +310,8 @@ export default function Quizzes() {
 
   const generateContentQuiz = async (content) => {
     setContentQuizLoading(true);
+    isCancelledRef.current = false;
+
     try {
       console.log(` Generating AI quiz for content: ${content.title}`);
 
@@ -306,6 +327,11 @@ export default function Quizzes() {
         }),
       });
 
+      if (isCancelledRef.current) {
+        console.log(" Content quiz generation was cancelled, aborting");
+        return;
+      }
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -313,15 +339,20 @@ export default function Quizzes() {
       const backendResponse = await response.json();
       console.log("[Backend response:", backendResponse);
 
+      if (isCancelledRef.current) {
+        console.log(" Content quiz generation was cancelled, aborting");
+        return;
+      }
+
       let quizData;
       if (backendResponse.quiz && Array.isArray(backendResponse.quiz)) {
         quizData = backendResponse.quiz;
       } else if (typeof backendResponse.quiz === "string") {
         let cleanQuizData = backendResponse.quiz.trim();
         cleanQuizData = cleanQuizData
-          .replace(/^```json\s*/i, "")
-          .replace(/^```\s*/, "")
-          .replace(/\s*```$/g, "")
+          .replace(/^\`\`\`json\s*/i, "")
+          .replace(/^\`\`\`\s*/, "")
+          .replace(/\s*\`\`\`$/g, "")
           .trim();
         quizData = JSON.parse(cleanQuizData);
       } else {
@@ -421,8 +452,15 @@ export default function Quizzes() {
         );
       }
 
+      if (isCancelledRef.current) {
+        console.log(
+          " Content quiz generation was cancelled, not displaying quiz"
+        );
+        return;
+      }
+
       setContentQuiz({
-        title: content.title, // Remove "Quiz: " prefix to match note title
+        title: content.title,
         questions: formattedQuestions,
         sourceType: content.type,
         sourceTitle: content.title,
@@ -432,14 +470,17 @@ export default function Quizzes() {
         `AI Quiz generated successfully! ${formattedQuestions.length} questions created.`
       );
     } catch (error) {
-      console.error(" Error generating content quiz:", error);
-      toast.error(`Failed to generate quiz: ${error.message}`);
+      if (!isCancelledRef.current) {
+        console.error(" Error generating content quiz:", error);
+        toast.error(`Failed to generate quiz: ${error.message}`);
+      }
     } finally {
       setContentQuizLoading(false);
     }
   };
 
   const cancelQuizGeneration = () => {
+    isCancelledRef.current = true;
     setQuizMode(null);
     setContentQuiz(null);
     setGeneratedQuiz(null);
@@ -591,43 +632,50 @@ export default function Quizzes() {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-4">
-            <div className="flex items-center gap-4">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setActiveQuiz(null)}
-                className="gap-2"
+                className="gap-1 sm:gap-2"
               >
-                <ArrowLeft className="h-4 w-4" />
-                Back
+                <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
+                <span className="text-xs sm:text-sm">Back</span>
               </Button>
-              <h1 className="text-2xl font-bold">{activeQuiz.title}</h1>
+              <h1 className="text-lg sm:text-2xl font-bold truncate">
+                {activeQuiz.title}
+              </h1>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant="outline">
-                Question {currentQuestion + 1} of {activeQuiz.questions.length}
+              <Badge
+                variant="outline"
+                className="text-xs sm:text-sm whitespace-nowrap"
+              >
+                Q {currentQuestion + 1}/{activeQuiz.questions.length}
               </Badge>
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => setShowQuestionNav(!showQuestionNav)}
-                className="gap-2"
+                className="gap-1 sm:gap-2 text-xs sm:text-sm"
               >
                 Navigate
               </Button>
             </div>
           </div>
           <Progress value={progress} className="mb-2" />
-          <p className="text-sm text-muted-foreground">
+          <p className="text-xs sm:text-sm text-muted-foreground">
             Progress: {Math.round(progress)}%
           </p>
 
           {showQuestionNav && (
             <Card className="mt-4">
-              <CardContent className="p-4">
-                <h3 className="text-sm font-medium mb-3">Jump to Question:</h3>
-                <div className="grid grid-cols-5 gap-2">
+              <CardContent className="p-3 sm:p-4">
+                <h3 className="text-xs sm:text-sm font-medium mb-2 sm:mb-3">
+                  Jump to Question:
+                </h3>
+                <div className="grid grid-cols-6 sm:grid-cols-8 md:grid-cols-10 gap-1.5 sm:gap-2">
                   {activeQuiz.questions.map((_, index) => (
                     <Button
                       key={index}
@@ -641,7 +689,7 @@ export default function Quizzes() {
                       }
                       size="sm"
                       onClick={() => goToQuestion(index)}
-                      className={`h-8 w-12 ${
+                      className={`h-7 sm:h-8 text-xs sm:text-sm ${
                         currentQuestion === index ? "text-white" : ""
                       }`}
                     >
@@ -655,10 +703,12 @@ export default function Quizzes() {
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">{question.question}</CardTitle>
+          <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg leading-relaxed">
+              {question.question}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-2 sm:space-y-2.5 p-3 sm:p-4 pt-2 sm:pt-3">
             {question.type === "multiple-choice" && (
               <RadioGroup
                 value={answers[question.id]?.toString() || ""}
@@ -666,14 +716,14 @@ export default function Quizzes() {
                   console.log(" RadioGroup value changed:", value);
                   handleAnswer(question.id, Number.parseInt(value));
                 }}
-                className="space-y-3"
+                className="space-y-2 sm:space-y-2.5"
               >
                 {question.options?.map((option, index) => {
                   console.log(" Rendering option:", index, option);
                   return (
                     <div
                       key={index}
-                      className="flex items-center space-x-3 p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
+                      className="flex items-center space-x-2 sm:space-x-3 p-2.5 sm:p-3 rounded-lg border hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors"
                       onClick={() => {
                         console.log(" Option clicked:", index, option);
                         handleAnswer(question.id, index);
@@ -685,39 +735,46 @@ export default function Quizzes() {
                       />
                       <Label
                         htmlFor={`option-${index}`}
-                        className="flex-1 cursor-pointer text-sm font-medium"
+                        className="flex-1 cursor-pointer text-xs sm:text-sm font-medium leading-relaxed"
                       >
                         {option || `Option ${index + 1} (empty)`}
                       </Label>
                     </div>
                   );
                 }) || (
-                  <div className="text-red-500">
+                  <div className="text-red-500 text-sm">
                     No options available for this question
                   </div>
                 )}
               </RadioGroup>
             )}
 
-            <div className="flex justify-between pt-4">
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setActiveQuiz(null)}>
+            <div className="flex flex-col sm:flex-row sm:justify-between gap-2 sm:gap-0 pt-3 sm:pt-4">
+              <div className="flex gap-1.5 sm:gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setActiveQuiz(null)}
+                  size="sm"
+                  className="flex-1 sm:flex-none text-xs sm:text-sm"
+                >
                   Exit Quiz
                 </Button>
                 <Button
                   variant="outline"
                   onClick={previousQuestion}
                   disabled={currentQuestion === 0}
-                  className="gap-2 bg-transparent"
+                  className="gap-1 sm:gap-2 bg-transparent flex-1 sm:flex-none text-xs sm:text-sm"
+                  size="sm"
                 >
-                  <ArrowLeft className="h-4 w-4" />
+                  <ArrowLeft className="h-3 w-3 sm:h-4 sm:w-4" />
                   Previous
                 </Button>
               </div>
               <Button
                 onClick={nextQuestion}
-                className="text-white"
+                className="text-white text-xs sm:text-sm w-full sm:w-auto"
                 disabled={answers[question.id] === undefined}
+                size="sm"
               >
                 {currentQuestion === activeQuiz.questions.length - 1
                   ? "Finish Quiz"
@@ -768,7 +825,7 @@ export default function Quizzes() {
 
             <div className="mt-6 p-4 rounded-lg border bg-muted/50">
               <div className="flex items-center justify-center gap-3 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-500" />
+                <CheckCircle className="h-4 w-4 text-green-500 mt-0.5" />
                 <span className="text-sm text-green-600">
                   Score saved to analytics!
                 </span>
@@ -858,75 +915,67 @@ export default function Quizzes() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[85vh]">
       <div className="mb-8">
-        <div className="flex-col sm:flex sm:flex-row sm:justify-between sm:items-center mb-4">
-          <div>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4 mb-6">
+          <div className="flex-1">
             {quizMode === "content" ? (
               <>
-                <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-                  <FileText className="h-8 w-8" />
-                  Generating Quiz from Content
+                <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
+                  <FileText className="h-6 w-6 sm:h-8 sm:w-8" />
+                  <span className="leading-tight">
+                    Generating Quiz from Content
+                  </span>
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Creating a quick quiz from your selected content
                 </p>
               </>
             ) : quizMode === "ai" ? (
               <>
-                <h1 className=" text-xl sm:text-3xl font-bold mb-2 flex items-center gap-3">
-                  <Brain className="h-4 w-4 sm:h-8 sm:w-8" />
-                  Generating AI Quiz
+                <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
+                  <Brain className="h-6 w-6 sm:h-8 sm:w-8" />
+                  <span className="leading-tight">Generating AI Quiz</span>
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Creating a comprehensive AI-powered quiz
                 </p>
               </>
             ) : (
               <>
-                <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-                  <Brain className="h-8 w-8 text-primary" />
-                  Quiz Center
+                <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-2 sm:gap-3">
+                  <Brain className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
+                  <span className="leading-tight">Quiz Center</span>
                 </h1>
-                <p className="text-muted-foreground">
+                <p className="text-sm sm:text-base text-muted-foreground">
                   Create and take quizzes from your notes and transcripts
                 </p>
               </>
             )}
           </div>
-          {(quizMode || contentQuizLoading || loading) && (
-            <Button
-              variant="outline"
-              onClick={cancelQuizGeneration}
-              className="gap-2 bg-transparent mt-5 mb-[-5rem] sm:mt-0 sm:mb-0"
-            >
-              <X className="h-4 w-4" />
-              Cancel
-            </Button>
-          )}
         </div>
 
         {contentQuiz && (
-          <Card className="mb-8">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
+          <Card className="mb-6 sm:mb-8">
+            <CardHeader className="p-3 sm:p-4 pb-2 sm:pb-3">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
                 {contentQuiz.sourceType === "note" ? (
-                  <FileText className="h-5 w-5" />
+                  <FileText className="h-4 w-4 sm:h-5 sm:w-5" />
                 ) : (
-                  <Mic className="h-5 w-5" />
+                  <Mic className="h-4 w-4 sm:h-5 sm:w-5" />
                 )}
-                {contentQuiz.title}
+                <span className="truncate">{contentQuiz.title}</span>
               </CardTitle>
-              <CardDescription className="">
+              <CardDescription className="text-xs sm:text-sm">
                 Generated from your {contentQuiz.sourceType}: "
                 {contentQuiz.sourceTitle}" - Ready to take!
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="flex justify-between items-center">
-                <div className="space-y-1">
-                  <p className="text-sm">
+            <CardContent className="p-3 sm:p-4 pt-2 sm:pt-3">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+                <div className="space-y-0.5">
+                  <p className="text-xs sm:text-sm">
                     {contentQuiz.questions.length} questions
                   </p>
-                  <p className="text-sm ">
+                  <p className="text-xs sm:text-sm">
                     Estimated time:{" "}
                     {Math.ceil(contentQuiz.questions.length * 1.5)} minutes
                   </p>
@@ -936,14 +985,16 @@ export default function Quizzes() {
                     variant="outline"
                     onClick={cancelQuizGeneration}
                     size="sm"
+                    className="flex-1 sm:flex-none text-xs sm:text-sm"
                   >
                     Cancel
                   </Button>
                   <Button
                     onClick={() => startQuiz(contentQuiz)}
-                    className="gap-2 text-white"
+                    className="gap-2 text-white flex-1 sm:flex-none text-xs sm:text-sm"
+                    size="sm"
                   >
-                    <Play className="h-4 w-4" />
+                    <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                     Start Quiz
                   </Button>
                 </div>
@@ -953,19 +1004,19 @@ export default function Quizzes() {
         )}
 
         {!quizMode && (
-          <Card className="mb-8">
+          <Card className="mb-6 sm:mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Plus className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                <Plus className="h-4 w-4 sm:h-5" />
                 Generate AI Quiz
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs sm:text-sm">
                 Create a comprehensive quiz from your existing notes or
                 transcripts using AI
               </CardDescription>
             </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start">
+            <CardContent className="sm:p-2 sm:px-4">
+              <div className="flex flex-col sm:grid sm:grid-cols-[1fr_auto] gap-3 sm:gap-4">
                 <Select
                   value={selectedSource}
                   onValueChange={setSelectedSource}
@@ -990,9 +1041,10 @@ export default function Quizzes() {
                 <Button
                   onClick={generateQuiz}
                   disabled={loading}
-                  className="gap-2 text-white cursor-pointer w-full md:w-auto whitespace-nowrap"
+                  className="gap-2 text-white cursor-pointer w-full sm:w-auto whitespace-nowrap text-xs sm:text-sm"
+                  size="sm"
                 >
-                  <Brain className="h-4 w-4" />
+                  <Brain className="h-3 w-3 sm:h-4 sm:w-4" />
                   {loading ? "Generating..." : "Generate AI Quiz"}
                 </Button>
               </div>
@@ -1002,20 +1054,20 @@ export default function Quizzes() {
       </div>
 
       {generatedQuiz && (
-        <Card className="mb-8 ">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              {generatedQuiz.title}
+        <Card className="mb-6 sm:mb-8">
+          <CardHeader className="">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Brain className="h-4 w-4 sm:h-5 sm:w-5" />
+              <span className="truncate">{generatedQuiz.title}</span>
             </CardTitle>
-            <CardDescription>
+            <CardDescription className="text-xs sm:text-sm">
               AI-generated comprehensive quiz ready to take
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="flex justify-between items-center">
-              <div className="space-y-1">
-                <p className="text-sm">
+            <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 sm:gap-0">
+              <div className="space-y-0.5">
+                <p className="text-xs sm:text-sm">
                   {generatedQuiz.questions.length} questions
                 </p>
                 <p className="text-xs sm:text-sm text-primary">
@@ -1023,20 +1075,21 @@ export default function Quizzes() {
                   {Math.ceil(generatedQuiz.questions.length * 1.5)} minutes
                 </p>
               </div>
-              <div className="flex gap-1">
+              <div className="my-2 sm:my-0 flex gap-2">
                 <Button
                   variant="outline"
                   onClick={resetToMainView}
                   size="sm"
-                  className="text-xs sm:text-sm p-4 bg-transparent"
+                  className="flex-1 sm:flex-none text-xs sm:text-sm bg-transparent"
                 >
                   Cancel
                 </Button>
                 <Button
                   onClick={() => startQuiz(generatedQuiz)}
-                  className="gap-2 text-white text-xs sm:text-sm"
+                  className="gap-2 text-white flex-1 sm:flex-none text-xs sm:text-sm"
+                  size="sm"
                 >
-                  <Play className="h-4 w-4" />
+                  <Play className="h-3 w-3 sm:h-4 sm:w-4" />
                   Start Quiz
                 </Button>
               </div>
@@ -1046,17 +1099,24 @@ export default function Quizzes() {
       )}
 
       {contentQuizLoading && (
-        <Card className="mb-8 ">
-          <CardContent className="p-8 text-center">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <FileText className="h-8 w-8 animate-pulse" />
-              <Brain className="h-8 w-8  animate-pulse" />
+        <Card className="mb-6 sm:mb-8">
+          <CardContent className="p-6 sm:p-8 text-center">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <FileText className="h-6 w-6 sm:h-8 sm:w-8 animate-pulse" />
+              <Brain className="h-6 w-6 sm:h-8 sm:w-8 animate-pulse" />
             </div>
-            <h3 className="text-lg font-medium mb-2">Generating Quiz</h3>
-            <p className=" mb-4">
+            <h3 className="text-base sm:text-lg font-medium mb-2">
+              Generating Quiz
+            </h3>
+            <p className="text-xs sm:text-sm mb-3 sm:mb-4">
               Analyzing your content and creating questions...
             </p>
-            <Button variant="outline" onClick={cancelQuizGeneration} size="sm">
+            <Button
+              variant="outline"
+              onClick={cancelQuizGeneration}
+              size="sm"
+              className="text-xs sm:text-sm"
+            >
               Cancel Generation
             </Button>
           </CardContent>
@@ -1064,18 +1124,25 @@ export default function Quizzes() {
       )}
 
       {loading && (
-        <Card className="mb-8 ">
-          <CardContent className="p-8 text-center">
-            <div className="flex items-center justify-center gap-4 mb-4">
-              <Brain className="h-8 w-8 animate-pulse" />
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2"></div>
+        <Card className="mb-6 sm:mb-8">
+          <CardContent className="p-6 sm:p-8 text-center">
+            <div className="flex items-center justify-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <Brain className="h-6 w-6 sm:h-8 sm:w-8 animate-pulse" />
+              <div className="animate-spin rounded-full h-6 w-6 sm:h-8 sm:w-8 border-b-2"></div>
             </div>
-            <h3 className="text-lg font-medium mb-2">Generating AI Quiz</h3>
-            <p className=" mb-4">
+            <h3 className="text-base sm:text-lg font-medium mb-2">
+              Generating AI Quiz
+            </h3>
+            <p className="text-xs sm:text-sm mb-3 sm:mb-4">
               AI is analyzing "{selectedSource}" and creating comprehensive
               questions...
             </p>
-            <Button variant="outline" onClick={cancelQuizGeneration} size="sm">
+            <Button
+              variant="outline"
+              onClick={cancelQuizGeneration}
+              size="sm"
+              className="text-xs sm:text-sm"
+            >
               Cancel Generation
             </Button>
           </CardContent>

@@ -145,15 +145,6 @@ export default function Navbar() {
                       </div>
                     </div>
                     <DropdownMenuSeparator />
-                    {/* <DropdownMenuItem>
-                      <User className="mr-2 h-4 w-4" />
-                      <span>Profile</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem>
-                      <Settings className="mr-2 h-4 w-4" />
-                      <span>Settings</span>
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator /> */}
                     <DropdownMenuItem onClick={handleSignOut}>
                       <LogOut className="mr-2 h-4 w-4" />
                       <span>Sign out</span>
@@ -236,7 +227,6 @@ export default function Navbar() {
                         </span>
                       </div>
                     </div>
-
                     <Button
                       variant="ghost"
                       className="w-full justify-start"
