@@ -10,7 +10,16 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Mic, Square, Play, Pause, Save, Trash2, MicOff } from "lucide-react";
+import {
+  Mic,
+  Square,
+  Play,
+  Pause,
+  Save,
+  Trash2,
+  MicOff,
+  AlertTriangle,
+} from "lucide-react";
 import SpeechRecognition, {
   useSpeechRecognition,
 } from "react-speech-recognition";
@@ -23,6 +32,7 @@ import Pagination from "../components/Pagination";
 import ViewDialog from "../components/ViewDialog";
 
 export default function Transcribe() {
+  const [isSecureContext, setIsSecureContext] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
@@ -57,6 +67,24 @@ export default function Transcribe() {
   } = useSpeechRecognition();
 
   useEffect(() => {
+    const checkSecureContext = () => {
+      const isSecure =
+        window.isSecureContext ||
+        window.location.protocol === "https:" ||
+        window.location.hostname === "localhost";
+      setIsSecureContext(isSecure);
+
+      if (!isSecure) {
+        console.error(
+          " Not a secure context. Speech recognition requires HTTPS in production."
+        );
+      }
+    };
+
+    checkSecureContext();
+  }, []);
+
+  useEffect(() => {
     if (user) {
       fetchSavedTranscripts();
     }
@@ -83,15 +111,30 @@ export default function Transcribe() {
   };
 
   const startRecording = () => {
+    if (!isSecureContext) {
+      toast.error(
+        "Microphone access requires HTTPS. Please access the site via HTTPS."
+      );
+      return;
+    }
+
     setIsRecording(true);
     setIsPaused(false);
     resetTranscript();
 
-    SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+    try {
+      SpeechRecognition.startListening({ continuous: true, language: "en-US" });
 
-    intervalRef.current = setInterval(() => {
-      setRecordingTime((prev) => prev + 1);
-    }, 1000);
+      intervalRef.current = setInterval(() => {
+        setRecordingTime((prev) => prev + 1);
+      }, 1000);
+    } catch (error) {
+      console.error(" Error starting speech recognition:", error);
+      toast.error(
+        "Failed to start recording. Please check microphone permissions."
+      );
+      setIsRecording(false);
+    }
   };
 
   const pauseRecording = () => {
@@ -190,9 +233,9 @@ export default function Transcribe() {
             // Clean markdown code blocks if present
             let cleanQuizData = data.quiz.trim();
             cleanQuizData = cleanQuizData
-              .replace(/^\`\`\`json\s*/i, "")
-              .replace(/^\`\`\`\s*/, "")
-              .replace(/\s*\`\`\`$/g, "")
+              .replace(/^```json\s*/i, "")
+              .replace(/^```\s*/, "")
+              .replace(/\s*```$/g, "")
               .trim();
             quizData = JSON.parse(cleanQuizData);
           } else {
@@ -373,6 +416,46 @@ export default function Transcribe() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  if (!isSecureContext) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <Card className="border-yellow-500">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-yellow-600">
+              <AlertTriangle className="h-5 w-5" />
+              HTTPS Required for Microphone Access
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="text-muted-foreground">
+              Speech recognition requires a secure connection (HTTPS) to access
+              your microphone in production environments.
+            </p>
+            <div className="bg-yellow-50 dark:bg-yellow-950 p-4 rounded-lg space-y-2">
+              <p className="font-semibold">To fix this issue:</p>
+              <ul className="list-disc list-inside space-y-1 text-sm">
+                <li>Ensure your site is deployed with HTTPS enabled</li>
+                <li>Check that your domain has a valid SSL certificate</li>
+                <li>Verify your hosting provider has HTTPS configured</li>
+                <li>
+                  Try accessing the site with{" "}
+                  <code className="bg-gray-200 dark:bg-gray-800 px-1 rounded">
+                    https://
+                  </code>{" "}
+                  in the URL
+                </li>
+              </ul>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Current protocol:{" "}
+              <Badge variant="outline">{window.location.protocol}</Badge>
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!browserSupportsSpeechRecognition) {
     return (
