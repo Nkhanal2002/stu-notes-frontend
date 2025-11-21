@@ -129,6 +129,17 @@ export default function Transcribe() {
   };
 
   const startRecording = async () => {
+    console.log(" START RECORDING CLICKED");
+    console.log(" isSecureContext:", isSecureContext);
+    console.log(
+      " browserSupportsSpeechRecognition:",
+      browserSupportsSpeechRecognition
+    );
+    console.log(
+      " SpeechRecognition available:",
+      window.SpeechRecognition || window.webkitSpeechRecognition
+    );
+
     if (!isSecureContext) {
       toast.error(
         "Microphone access requires HTTPS. Please access the site via HTTPS."
@@ -146,8 +157,8 @@ export default function Transcribe() {
     try {
       console.log(" Requesting microphone access...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log(" Microphone access granted");
-      stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+      console.log(" Microphone access granted:", stream.active);
+      stream.getTracks().forEach((track) => track.stop());
     } catch (error) {
       console.error(" Microphone permission denied:", error);
       toast.error(
@@ -161,32 +172,28 @@ export default function Transcribe() {
     resetTranscript();
 
     try {
-      console.log(" Starting speech recognition...");
-      await new Promise((resolve) => setTimeout(resolve, 100));
-      SpeechRecognition.abortListening();
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      console.log(" Calling SpeechRecognition.startListening...");
       await SpeechRecognition.startListening({
         continuous: true,
         language: "en-US",
-        interimResults: true,
       });
-      console.log(" Speech recognition started");
+      console.log(" startListening called successfully");
+      console.log(" Current listening state:", listening);
 
       intervalRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
 
-      setTimeout(() => {
-        console.log(" Listening state check:", listening);
-        if (!listening) {
-          console.warn(" Not listening after start - attempting restart");
-          SpeechRecognition.startListening({
-            continuous: true,
-            language: "en-US",
-            interimResults: true,
-          });
-        }
-      }, 500);
+      const checkInterval = setInterval(() => {
+        console.log(
+          " Listening check:",
+          listening,
+          "Browser support:",
+          browserSupportsSpeechRecognition
+        );
+      }, 1000);
+
+      setTimeout(() => clearInterval(checkInterval), 5000);
     } catch (error) {
       console.error(" Error starting speech recognition:", error);
       toast.error(`Failed to start recording: ${error.message}`);

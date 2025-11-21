@@ -14,6 +14,11 @@ export default defineConfig({
   build: {
     outDir: "../dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        manualChunks: undefined, // Prevent code splitting issues
+      },
+    },
   },
   root: "./src",
 });
