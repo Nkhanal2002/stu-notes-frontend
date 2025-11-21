@@ -41,7 +41,6 @@ export default function Transcribe() {
   const [loading, setLoading] = useState(false);
   const [quizLoading, setQuizLoading] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
-  const [micPermission, setMicPermission] = useState(null);
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState(null);
@@ -57,7 +56,8 @@ export default function Transcribe() {
   const intervalRef = useRef();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const backendURL = import.meta.env.VITE_BACKEND_URL;
+  const backendURL =
+    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
 
   const {
     transcript,
@@ -73,33 +73,9 @@ export default function Transcribe() {
         window.location.protocol === "https:" ||
         window.location.hostname === "localhost";
       setIsSecureContext(isSecure);
-
-      if (!isSecure) {
-        console.error(
-          " Not a secure context. Speech recognition requires HTTPS in production."
-        );
-      }
-    };
-
-    const checkMicrophonePermission = async () => {
-      try {
-        const permission = await navigator.permissions.query({
-          name: "microphone",
-        });
-        setMicPermission(permission.state);
-        console.log(" Microphone permission:", permission.state);
-
-        permission.addEventListener("change", () => {
-          setMicPermission(permission.state);
-          console.log(" Microphone permission changed to:", permission.state);
-        });
-      } catch (error) {
-        console.error(" Error checking microphone permission:", error);
-      }
     };
 
     checkSecureContext();
-    checkMicrophonePermission();
   }, []);
 
   useEffect(() => {
@@ -129,17 +105,6 @@ export default function Transcribe() {
   };
 
   const startRecording = async () => {
-    console.log(" START RECORDING CLICKED");
-    console.log(" isSecureContext:", isSecureContext);
-    console.log(
-      " browserSupportsSpeechRecognition:",
-      browserSupportsSpeechRecognition
-    );
-    console.log(
-      " SpeechRecognition available:",
-      window.SpeechRecognition || window.webkitSpeechRecognition
-    );
-
     if (!isSecureContext) {
       toast.error(
         "Microphone access requires HTTPS. Please access the site via HTTPS."
@@ -155,12 +120,9 @@ export default function Transcribe() {
     }
 
     try {
-      console.log(" Requesting microphone access...");
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      console.log(" Microphone access granted:", stream.active);
       stream.getTracks().forEach((track) => track.stop());
     } catch (error) {
-      console.error(" Microphone permission denied:", error);
       toast.error(
         "Microphone access denied. Please allow microphone permissions in your browser settings."
       );
@@ -172,30 +134,15 @@ export default function Transcribe() {
     resetTranscript();
 
     try {
-      console.log(" Calling SpeechRecognition.startListening...");
       await SpeechRecognition.startListening({
         continuous: true,
         language: "en-US",
       });
-      console.log(" startListening called successfully");
-      console.log(" Current listening state:", listening);
 
       intervalRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
-
-      const checkInterval = setInterval(() => {
-        console.log(
-          " Listening check:",
-          listening,
-          "Browser support:",
-          browserSupportsSpeechRecognition
-        );
-      }, 1000);
-
-      setTimeout(() => clearInterval(checkInterval), 5000);
     } catch (error) {
-      console.error(" Error starting speech recognition:", error);
       toast.error(`Failed to start recording: ${error.message}`);
       setIsRecording(false);
     }
@@ -559,16 +506,6 @@ export default function Transcribe() {
         <p className="text-muted-foreground">
           Record and transcribe your lectures in real-time
         </p>
-        {micPermission && (
-          <div className="mt-2">
-            <Badge
-              variant={micPermission === "granted" ? "default" : "destructive"}
-              className="text-xs"
-            >
-              Microphone: {micPermission}
-            </Badge>
-          </div>
-        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
