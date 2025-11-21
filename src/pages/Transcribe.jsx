@@ -41,6 +41,7 @@ export default function Transcribe() {
   const [loading, setLoading] = useState(false);
   const [quizLoading, setQuizLoading] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
+  const [micPermission, setMicPermission] = useState(null);
 
   const [viewerOpen, setViewerOpen] = useState(false);
   const [selectedTranscript, setSelectedTranscript] = useState(null);
@@ -56,8 +57,7 @@ export default function Transcribe() {
   const intervalRef = useRef();
   const { user } = useAuth();
   const navigate = useNavigate();
-  const backendURL =
-    import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  const backendURL = import.meta.env.VITE_BACKEND_URL;
 
   const {
     transcript,
@@ -81,7 +81,25 @@ export default function Transcribe() {
       }
     };
 
+    const checkMicrophonePermission = async () => {
+      try {
+        const permission = await navigator.permissions.query({
+          name: "microphone",
+        });
+        setMicPermission(permission.state);
+        console.log(" Microphone permission:", permission.state);
+
+        permission.addEventListener("change", () => {
+          setMicPermission(permission.state);
+          console.log(" Microphone permission changed to:", permission.state);
+        });
+      } catch (error) {
+        console.error(" Error checking microphone permission:", error);
+      }
+    };
+
     checkSecureContext();
+    checkMicrophonePermission();
   }, []);
 
   useEffect(() => {
@@ -110,10 +128,30 @@ export default function Transcribe() {
     }
   };
 
-  const startRecording = () => {
+  const startRecording = async () => {
     if (!isSecureContext) {
       toast.error(
         "Microphone access requires HTTPS. Please access the site via HTTPS."
+      );
+      return;
+    }
+
+    if (!browserSupportsSpeechRecognition) {
+      toast.error(
+        "Your browser doesn't support speech recognition. Please use Chrome, Edge, or Safari."
+      );
+      return;
+    }
+
+    try {
+      console.log(" Requesting microphone access...");
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      console.log(" Microphone access granted");
+      stream.getTracks().forEach((track) => track.stop()); // Stop the test stream
+    } catch (error) {
+      console.error(" Microphone permission denied:", error);
+      toast.error(
+        "Microphone access denied. Please allow microphone permissions in your browser settings."
       );
       return;
     }
@@ -123,16 +161,35 @@ export default function Transcribe() {
     resetTranscript();
 
     try {
-      SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+      console.log(" Starting speech recognition...");
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      SpeechRecognition.abortListening();
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      await SpeechRecognition.startListening({
+        continuous: true,
+        language: "en-US",
+        interimResults: true,
+      });
+      console.log(" Speech recognition started");
 
       intervalRef.current = setInterval(() => {
         setRecordingTime((prev) => prev + 1);
       }, 1000);
+
+      setTimeout(() => {
+        console.log(" Listening state check:", listening);
+        if (!listening) {
+          console.warn(" Not listening after start - attempting restart");
+          SpeechRecognition.startListening({
+            continuous: true,
+            language: "en-US",
+            interimResults: true,
+          });
+        }
+      }, 500);
     } catch (error) {
       console.error(" Error starting speech recognition:", error);
-      toast.error(
-        "Failed to start recording. Please check microphone permissions."
-      );
+      toast.error(`Failed to start recording: ${error.message}`);
       setIsRecording(false);
     }
   };
@@ -147,7 +204,14 @@ export default function Transcribe() {
 
   const resumeRecording = () => {
     setIsPaused(false);
-    SpeechRecognition.startListening({ continuous: true, language: "en-US" });
+    SpeechRecognition.abortListening();
+    setTimeout(() => {
+      SpeechRecognition.startListening({
+        continuous: true,
+        language: "en-US",
+        interimResults: true,
+      });
+    }, 50);
     intervalRef.current = setInterval(() => {
       setRecordingTime((prev) => prev + 1);
     }, 1000);
@@ -488,6 +552,16 @@ export default function Transcribe() {
         <p className="text-muted-foreground">
           Record and transcribe your lectures in real-time
         </p>
+        {micPermission && (
+          <div className="mt-2">
+            <Badge
+              variant={micPermission === "granted" ? "default" : "destructive"}
+              className="text-xs"
+            >
+              Microphone: {micPermission}
+            </Badge>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
