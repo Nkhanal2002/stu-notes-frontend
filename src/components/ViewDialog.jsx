@@ -81,8 +81,8 @@ export default function ViewDialog({
       <DialogContent
         className={
           itemType === "note"
-            ? "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:min-w-[72%] sm:max-w-none flex flex-col"
-            : "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:min-w-[72%] sm:max-w-4xl flex flex-col"
+            ? "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:max-w-[70%] flex flex-col"
+            : "w-[90%] max-h-[72vh] sm:max-h-[80vh] sm:max-w-[70%] flex flex-col"
         }
       >
         <DialogHeader className="flex-shrink-0">
