@@ -89,7 +89,7 @@ export default function Navbar() {
           </div>
 
           {/* Theme Toggle & Auth Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center md:space-x-4">
             {/* Theme Toggle */}
             <Button
               variant="ghost"
@@ -157,12 +157,12 @@ export default function Navbar() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setIsOpen(!isOpen)}
-                className="w-9 px-0"
+                className="w-12 px-0"
               >
                 {isOpen ? (
-                  <X className="h-5 w-5" />
+                  <X className="h-8 w-8" />
                 ) : (
-                  <Menu className="h-5 w-5" />
+                  <Menu className="h-8 w-8" />
                 )}
               </Button>
             </div>
