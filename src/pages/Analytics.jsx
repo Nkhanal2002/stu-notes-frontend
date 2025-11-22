@@ -460,7 +460,7 @@ export default function Analytics() {
           </div>
 
           {/* Performance Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-3 sm:py-5">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Performance Pie Chart */}
             <Card className="lg:col-span-1">
               <CardHeader>
@@ -497,8 +497,8 @@ export default function Analytics() {
                         layout="vertical"
                         wrapperStyle={{
                           fontSize: "14px",
-                          paddingTop: "10px",
-                          lineHeight: "24px",
+                          paddingTop: "5px",
+                          lineHeight: "18px",
                         }}
                         formatter={(value, entry) =>
                           `${value}: ${entry.payload.value}`
