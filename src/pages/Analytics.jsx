@@ -460,7 +460,7 @@ export default function Analytics() {
           </div>
 
           {/* Performance Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pb-2">
             {/* Performance Pie Chart */}
             <Card className="lg:col-span-1">
               <CardHeader>
