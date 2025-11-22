@@ -39,6 +39,8 @@ export default function Transcribe() {
   const [title, setTitle] = useState("");
   const [savedTranscripts, setSavedTranscripts] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingSavedTranscripts, setFetchingSavedTranscripts] =
+    useState(false);
   const [quizLoading, setQuizLoading] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(null);
 
@@ -85,6 +87,7 @@ export default function Transcribe() {
   }, [user]);
 
   const fetchSavedTranscripts = async () => {
+    setFetchingSavedTranscripts(true);
     try {
       const response = await fetch(
         `${backendURL}/api/transcribe/getTranscribedNotes`,
@@ -101,6 +104,8 @@ export default function Transcribe() {
       }
     } catch (error) {
       console.error("Error fetching transcripts:", error);
+    } finally {
+      setFetchingSavedTranscripts(false);
     }
   };
 
@@ -434,6 +439,18 @@ export default function Transcribe() {
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
+
+  // Add loading state check
+  if (fetchingSavedTranscripts) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading Transcribe...</p>
+        </div>
+      </div>
+    );
+  }
 
   if (!isSecureContext) {
     return (

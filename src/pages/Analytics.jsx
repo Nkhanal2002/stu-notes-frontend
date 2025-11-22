@@ -236,16 +236,10 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {[...Array(4)].map((_, i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="p-6">
-                <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
-                <div className="h-8 bg-muted rounded w-1/2"></div>
-              </CardContent>
-            </Card>
-          ))}
+      <div className="container mx-auto px-4 py-8 max-w-7xl min-h-[80vh] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading analytics...</p>
         </div>
       </div>
     );
@@ -466,7 +460,7 @@ export default function Analytics() {
           </div>
 
           {/* Performance Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-3 sm:py-5">
             {/* Performance Pie Chart */}
             <Card className="lg:col-span-1">
               <CardHeader>
@@ -499,7 +493,13 @@ export default function Analytics() {
                       <Legend
                         verticalAlign="bottom"
                         height={36}
-                        wrapperStyle={{ fontSize: "14px" }}
+                        align="center"
+                        layout="vertical"
+                        wrapperStyle={{
+                          fontSize: "14px",
+                          paddingTop: "10px",
+                          lineHeight: "24px",
+                        }}
                         formatter={(value, entry) =>
                           `${value}: ${entry.payload.value}`
                         }
@@ -537,7 +537,7 @@ export default function Analytics() {
                                     ? "secondary"
                                     : "destructive"
                                 }
-                                className="text-sm"
+                                className="text-sm text-white"
                               >
                                 {quiz.score}%
                               </Badge>

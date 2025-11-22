@@ -18,6 +18,7 @@ export default function Notes() {
   const [searchTerm, setSearchTerm] = useState("");
   const [notes, setNotes] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [fetchingNotes, setFetchingNotes] = useState(true);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(null);
   const [viewerOpen, setViewerOpen] = useState(false);
@@ -54,6 +55,7 @@ export default function Notes() {
   }, [user]);
 
   const fetchNotes = async () => {
+    setFetchingNotes(true);
     try {
       const response = await fetch(`${backendURL}/api/transcribe/getNotes`, {
         method: "GET",
@@ -77,6 +79,8 @@ export default function Notes() {
     } catch (error) {
       console.error("Error fetching notes:", error);
       toast.error("Failed to load notes");
+    } finally {
+      setFetchingNotes(false);
     }
   };
 
@@ -236,6 +240,18 @@ export default function Notes() {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
+
+  // Add loading state check
+  if (fetchingNotes) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[calc(100vh-8rem)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+          <p className="text-muted-foreground">Loading notes...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[calc(100vh-8rem)] flex flex-col">

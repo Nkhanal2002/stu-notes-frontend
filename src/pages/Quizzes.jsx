@@ -43,6 +43,7 @@ export default function Quizzes() {
   const [selectedSource, setSelectedSource] = useState("");
   const [questionCount, setQuestionCount] = useState("10");
   const [loading, setLoading] = useState(false);
+  const [fetchingNotes, setFetchingNotes] = useState(false);
   const [generatedQuiz, setGeneratedQuiz] = useState(null);
   const [contentQuiz, setContentQuiz] = useState(null);
   const [contentQuizLoading, setContentQuizLoading] = useState(false);
@@ -71,6 +72,7 @@ export default function Quizzes() {
   }, [user, location.state]);
 
   const fetchNotes = async () => {
+    setFetchingNotes(true);
     try {
       const response = await fetch(`${backendURL}/api/transcribe/getNotes`, {
         method: "GET",
@@ -83,6 +85,8 @@ export default function Quizzes() {
     } catch (error) {
       console.error("Error fetching notes:", error);
       toast.error("Failed to load notes");
+    } finally {
+      setFetchingNotes(false);
     }
   };
 
@@ -793,6 +797,18 @@ export default function Quizzes() {
       (score / 100) * activeQuiz.questions.length
     );
 
+    // Add loading state check
+    if (fetchingNotes) {
+      return (
+        <div className="container mx-auto px-4 py-8 max-w-6xl min-h-[calc(100vh-8rem)] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground">Loading Quizzes...</p>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <Card>
@@ -1149,7 +1165,7 @@ export default function Quizzes() {
         </Card>
       )}
 
-      {notes.length === 0 && !contentQuiz && !quizMode && (
+      {notes.length === 0 && !contentQuiz && !quizMode && !fetchingNotes && (
         <div className="text-center py-12">
           <Brain className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">No notes available</h3>
