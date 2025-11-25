@@ -16,19 +16,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  LineChart,
-  Line,
   BarChart,
   Bar,
-  PieChart,
-  Pie,
-  Cell,
   XAxis,
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
+  Area,
+  AreaChart,
 } from "recharts";
 import {
   TrendingUp,
@@ -38,6 +34,9 @@ import {
   Clock,
   Award,
   BarChart3,
+  ArrowLeft,
+  ChevronRight,
+  Search,
 } from "lucide-react";
 import { useAuth } from "../contexts/AuthContext";
 import Pagination from "../components/Pagination";
@@ -50,8 +49,35 @@ export default function Analytics() {
   const [timeRange, setTimeRange] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(4);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+  const [courseList, setCourseList] = useState([]);
+  const [coursePage, setCoursePage] = useState(1);
+  const [courseItemsPerPage, setCourseItemsPerPage] = useState(6);
+  const [courseSearch, setCourseSearch] = useState("");
+
   const backendURL =
     import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const courseFromUrl = params.get("course");
+    if (courseFromUrl) {
+      setSelectedCourse(decodeURIComponent(courseFromUrl));
+    }
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (selectedCourse) {
+      params.set("course", encodeURIComponent(selectedCourse));
+    } else {
+      params.delete("course");
+    }
+    const newUrl = params.toString()
+      ? `${window.location.pathname}?${params}`
+      : window.location.pathname;
+    window.history.replaceState({}, "", newUrl);
+  }, [selectedCourse]);
 
   useEffect(() => {
     const fetchQuizData = async () => {
@@ -78,6 +104,8 @@ export default function Analytics() {
         const titles = [...new Set(notesData.notes.map((note) => note.title))];
 
         const allQuizzes = [];
+        const coursesWithData = [];
+
         for (const title of titles) {
           try {
             const analysisRes = await fetch(
@@ -104,6 +132,9 @@ export default function Analytics() {
                   createdAt: item.createdAt,
                 }));
                 allQuizzes.push(...quizzesForTitle);
+                if (!coursesWithData.includes(title)) {
+                  coursesWithData.push(title);
+                }
               }
             }
           } catch (err) {
@@ -115,6 +146,7 @@ export default function Analytics() {
           (a, b) => new Date(a.createdAt) - new Date(b.createdAt)
         );
         setQuizData(allQuizzes);
+        setCourseList(coursesWithData);
       } catch (err) {
         console.error("Error fetching quiz data:", err);
         setError(err.message || "Failed to load quiz analytics");
@@ -124,11 +156,12 @@ export default function Analytics() {
     };
 
     fetchQuizData();
-  }, [user]);
+  }, [user, backendURL]);
 
   useEffect(() => {
     const handleResize = () => {
       setItemsPerPage(window.innerWidth >= 768 ? 4 : 3);
+      setCourseItemsPerPage(window.innerWidth >= 768 ? 6 : 3);
     };
 
     handleResize();
@@ -138,9 +171,17 @@ export default function Analytics() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [itemsPerPage]);
+  }, [itemsPerPage, selectedCourse, timeRange]);
 
-  const filteredQuizData = quizData.filter((quiz) => {
+  useEffect(() => {
+    setCoursePage(1);
+  }, [courseSearch, courseItemsPerPage]);
+
+  const courseFilteredData = selectedCourse
+    ? quizData.filter((quiz) => quiz.title === selectedCourse)
+    : quizData;
+
+  const filteredQuizData = courseFilteredData.filter((quiz) => {
     const quizDate = new Date(quiz.createdAt);
     const now = new Date();
     const daysDiff = (now - quizDate) / (1000 * 60 * 60 * 24);
@@ -173,13 +214,9 @@ export default function Analytics() {
 
   function calculateTrend() {
     if (filteredQuizData.length < 2) return 0;
-    const recent =
-      filteredQuizData.slice(-5).reduce((sum, q) => sum + q.score, 0) /
-      Math.min(5, filteredQuizData.length);
-    const older =
-      filteredQuizData.slice(0, -5).reduce((sum, q) => sum + q.score, 0) /
-      Math.max(1, filteredQuizData.length - 5);
-    return Math.round(recent - older);
+    const latestScore = filteredQuizData[filteredQuizData.length - 1].score;
+    const firstScore = filteredQuizData[0].score;
+    return latestScore - firstScore;
   }
 
   // Prepare chart data for Recharts
@@ -190,20 +227,17 @@ export default function Analytics() {
   }));
 
   const barChartData = filteredQuizData.reduce((acc, quiz) => {
-    // Cap score at 100 to avoid invalid ranges
     const cappedScore = Math.min(quiz.score, 100);
     const scoreRange = Math.floor(cappedScore / 10) * 10;
-    // Special handling for perfect scores
     const range =
       cappedScore === 100 ? "90-100%" : `${scoreRange}-${scoreRange + 9}%`;
     acc[range] = (acc[range] || 0) + 1;
     return acc;
   }, {});
 
-  // Sort the ranges in ascending order
   const barData = Object.entries(barChartData)
     .sort(([rangeA], [rangeB]) => {
-      const getStartValue = (range) => parseInt(range.split("-")[0]);
+      const getStartValue = (range) => Number.parseInt(range.split("-")[0]);
       return getStartValue(rangeA) - getStartValue(rangeB);
     })
     .map(([range, count]) => ({
@@ -261,6 +295,126 @@ export default function Analytics() {
     );
   }
 
+  if (!selectedCourse && courseList.length > 0) {
+    const filteredCourses = courseList.filter((course) =>
+      course.toLowerCase().includes(courseSearch.toLowerCase())
+    );
+
+    const courseTotalPages = Math.ceil(
+      filteredCourses.length / courseItemsPerPage
+    );
+    const courseStartIndex = (coursePage - 1) * courseItemsPerPage;
+    const paginatedCourses = filteredCourses.slice(
+      courseStartIndex,
+      courseStartIndex + courseItemsPerPage
+    );
+
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen bg-background">
+        <div className="mb-8">
+          <h1 className="text-xl sm:text-3xl font-bold mb-2 flex items-center gap-3">
+            <BarChart3 className="h-8 w-8 text-primary" />
+            Quiz Analytics by Course
+          </h1>
+          <p className="text-muted-foreground">
+            Select a course to view detailed analytics
+          </p>
+        </div>
+
+        <div className="mb-6 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <input
+            type="text"
+            placeholder="Search courses..."
+            value={courseSearch}
+            onChange={(e) => setCourseSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {paginatedCourses.map((course) => {
+            const courseQuizzes = quizData.filter((q) => q.title === course);
+            const courseAvg = Math.round(
+              courseQuizzes.reduce((sum, q) => sum + q.score, 0) /
+                courseQuizzes.length
+            );
+            const latestScore =
+              courseQuizzes[courseQuizzes.length - 1]?.score || 0;
+
+            return (
+              <Card
+                key={course}
+                className="cursor-pointer hover:border-primary transition-colors"
+                onClick={() => setSelectedCourse(course)}
+              >
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg line-clamp-2">
+                    {course}
+                  </CardTitle>
+                  <CardDescription>
+                    {courseQuizzes.length}{" "}
+                    {courseQuizzes.length === 1 ? "quiz" : "quizzes"} taken
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Average Score
+                      </span>
+                      <Badge
+                        className={`${courseAvg >= 80 ? "text-white" : ""}`}
+                        variant={
+                          courseAvg >= 80
+                            ? "default"
+                            : courseAvg >= 60
+                            ? "secondary"
+                            : "destructive"
+                        }
+                      >
+                        {courseAvg}%
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Latest Score
+                      </span>
+                      <Badge variant="outline">{latestScore}%</Badge>
+                    </div>
+                    <Button
+                      className="w-full mt-2 bg-transparent"
+                      variant="outline"
+                    >
+                      View Analytics
+                      <ChevronRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+
+        {courseTotalPages > 1 && (
+          <div className="mt-8">
+            <Pagination
+              currentPage={coursePage}
+              totalPages={courseTotalPages}
+              onPageChange={setCoursePage}
+            />
+          </div>
+        )}
+
+        {filteredCourses.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            No courses found matching "{courseSearch}"
+          </div>
+        )}
+      </div>
+    );
+  }
+
   const recentQuizzes = filteredQuizData.slice().reverse();
   const totalPages = Math.ceil(recentQuizzes.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -269,31 +423,65 @@ export default function Analytics() {
     startIndex + itemsPerPage
   );
 
+  const generateQuizColors = (count) => {
+    const colors = [
+      "#3b82f6",
+      "#10b981",
+      "#f59e0b",
+      "#ef4444",
+      "#8b5cf6",
+      "#ec4899",
+      "#06b6d4",
+      "#84cc16",
+      "#f97316",
+      "#6366f1",
+    ];
+    return Array.from({ length: count }, (_, i) => colors[i % colors.length]);
+  };
+
+  const columnChartData = filteredQuizData.map((quiz, index) => ({
+    name: `Quiz ${index + 1}`,
+    score: quiz.score,
+    date: new Date(quiz.createdAt).toLocaleDateString(),
+    fill: generateQuizColors(filteredQuizData.length)[index],
+  }));
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl min-h-screen bg-background">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8">
+      {/* Header with back button */}
+      <div className="flex flex-col gap-4 mb-8">
         <div>
-          <h1 className="text-3xl font-bold mb-2 flex items-center gap-3">
-            <BarChart3 className="h-8 w-8 text-primary" />
-            Quiz Analytics
+          <h1 className="text-2xl sm:text-3xl font-bold mb-2 flex items-center gap-3 flex-wrap">
+            <BarChart3 className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
+            <span className="truncate">{selectedCourse}</span>
           </h1>
-          <p className="text-muted-foreground">
-            Track your learning progress and performance insights
+          <p className="text-muted-foreground mb-4">
+            Course analytics and performance insights
           </p>
-        </div>
-        <div className="flex items-center gap-4 mt-4 sm:mt-0">
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-32">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7d">Last 7 days</SelectItem>
-              <SelectItem value="30d">Last 30 days</SelectItem>
-              <SelectItem value="90d">Last 3 months</SelectItem>
-              <SelectItem value="all">All time</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex items-center justify-between gap-4">
+            <Button
+              variant="outline"
+              onClick={() => setSelectedCourse(null)}
+              className="flex-shrink-0 cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2 text-primary" />
+              <span className="hidden sm:inline font-medium">
+                Back to courses
+              </span>
+              <span className="sm:hidden font-medium">Back</span>
+            </Button>
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-32">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7d">Last 7 days</SelectItem>
+                <SelectItem value="30d">Last 30 days</SelectItem>
+                <SelectItem value="90d">Last 3 months</SelectItem>
+                <SelectItem value="all">All time</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
       </div>
 
@@ -301,16 +489,28 @@ export default function Analytics() {
         <Card className="text-center py-12">
           <CardContent>
             <BookOpen className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-medium mb-2">No quiz data yet</h3>
+            <h3 className="text-lg font-medium mb-2">
+              No quiz data for this time range
+            </h3>
             <p className="text-muted-foreground mb-4">
-              Take some quizzes to see your analytics here
+              Try selecting a different time range or take more quizzes
             </p>
-            <Button
-              onClick={() => (window.location.href = "/quizzes")}
-              className="text-white"
-            >
-              Take Your First Quiz
-            </Button>
+            <div className="flex flex-col gap-2 sm:gap-0 sm:flex-row sm:items-center sm:justify-center">
+              <Button
+                onClick={() => setSelectedCourse(null)}
+                variant="outline"
+                className="mr-2"
+              >
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                Back to Courses
+              </Button>
+              <Button
+                onClick={() => (window.location.href = "/quizzes")}
+                className="text-white"
+              >
+                Take More Quizzes
+              </Button>
+            </div>
           </CardContent>
         </Card>
       ) : (
@@ -374,12 +574,13 @@ export default function Analytics() {
                     </p>
                     <div className="flex items-center gap-2">
                       <p className="text-base sm:text-xl md:text-2xl font-bold">
-                        {Math.abs(improvementTrend)}%
+                        {improvementTrend > 0 ? "+" : ""}
+                        {improvementTrend}%
                       </p>
                       {improvementTrend > 0 ? (
-                        <TrendingUp className="h-4 w-4 text-green-500" />
+                        <TrendingUp className="h-5 w-5 md:h-6 md:w-6 text-green-500" />
                       ) : improvementTrend < 0 ? (
-                        <TrendingDown className="h-4 w-4 text-red-500" />
+                        <TrendingDown className="h-5 w-5 md:h-6 md:w-6 text-red-500" />
                       ) : null}
                     </div>
                   </div>
@@ -389,68 +590,149 @@ export default function Analytics() {
             </Card>
           </div>
 
-          {/* Charts Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-            {/* Score Trend Line Chart */}
-            <Card>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+            {/* Recent Quiz Results */}
+            <Card className="flex flex-col">
               <CardHeader>
-                <CardTitle>Score Progression</CardTitle>
-                <CardDescription>Your quiz scores over time</CardDescription>
+                <CardTitle>Recent Quiz Results</CardTitle>
+                <CardDescription>Your latest quiz performances</CardDescription>
               </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={lineChartData} className="ml-[-1.5rem]">
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip />
-                      <Legend />
-                      <Line
-                        type="monotone"
-                        dataKey="score"
-                        stroke="#3b82f6"
-                        name="Score (%)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+              <CardContent className="flex-1 flex flex-col">
+                <div className="space-y-4 flex-1">
+                  {paginatedQuizzes.length > 0 ? (
+                    paginatedQuizzes.map((quiz, index) => (
+                      <div
+                        key={startIndex + index}
+                        className="flex flex-row items-center justify-between p-3 sm:p-4 border rounded-lg hover:bg-accent transition-colors gap-2 sm:gap-3"
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-sm sm:text-base truncate">
+                            {quiz.title}
+                          </h4>
+                          <div className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm text-muted-foreground mt-0.5">
+                            <span>
+                              {new Date(quiz.createdAt).toLocaleDateString(
+                                "en-US",
+                                {
+                                  month: "short",
+                                  day: "numeric",
+                                  year: "numeric",
+                                }
+                              )}
+                            </span>
+                            <span>•</span>
+                            <span>
+                              {new Date(quiz.createdAt).toLocaleTimeString(
+                                "en-US",
+                                {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                }
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                        <Badge
+                          variant={
+                            quiz.score >= 90
+                              ? "default"
+                              : quiz.score >= 70
+                              ? "secondary"
+                              : "destructive"
+                          }
+                          className={` text-sm sm:text-base px-2 py-0.5 sm:px-2.5 sm:py-1 ${
+                            quiz.score >= 90 ? "text-white" : ""
+                          }`}
+                        >
+                          {quiz.score}%
+                        </Badge>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-muted-foreground py-8">
+                      No quizzes in this time range
+                    </p>
+                  )}
                 </div>
+
+                {totalPages > 1 && (
+                  <div className="mt-6 mb-2">
+                    <Pagination
+                      currentPage={currentPage}
+                      totalPages={totalPages}
+                      onPageChange={setCurrentPage}
+                    />
+                  </div>
+                )}
               </CardContent>
             </Card>
 
-            {/* Score Distribution Bar Chart */}
+            {/* Column Chart */}
             <Card>
               <CardHeader>
-                <CardTitle>Score Distribution</CardTitle>
+                <CardTitle>Quiz Performance Overview</CardTitle>
                 <CardDescription>
-                  How your scores are distributed
+                  Individual score for each quiz attempt
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="h-80">
+                <div className="h-[400px] mx-auto">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart
-                      data={barData}
-                      margin={{ top: 5, right: 10, left: -10, bottom: 5 }}
+                      data={columnChartData}
+                      margin={{ top: 0, right: 30, left: 0, bottom: 0 }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" />
                       <XAxis
-                        dataKey="range"
-                        angle={-45}
-                        textAnchor="end"
+                        dataKey="name"
+                        angle={filteredQuizData.length > 8 ? -45 : 0}
+                        textAnchor={
+                          filteredQuizData.length > 8 ? "end" : "middle"
+                        }
                         height={80}
                         interval={0}
-                        tick={{ fontSize: 14 }}
+                        tick={{ fontSize: 12 }}
+                        label={{
+                          value: "Quiz Attempts",
+                          position: "inside",
+                          offset: -10,
+                          style: { fontSize: 14, fontWeight: 600 },
+                        }}
                       />
-                      <YAxis />
-                      <Tooltip cursor={false} />
-                      <Legend />
+                      <YAxis
+                        domain={[0, 100]}
+                        label={{
+                          value: "Score (%)",
+                          angle: -90,
+                          position: "insideLeft",
+                          style: { fontSize: 14, fontWeight: 600 },
+                        }}
+                      />
+                      <Tooltip
+                        cursor={false}
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-background border rounded-lg p-3 shadow-lg">
+                                <p className="font-medium">
+                                  {payload[0].payload.name}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {payload[0].payload.date}
+                                </p>
+                                <p className="text-lg font-bold text-primary">
+                                  {payload[0].value}%
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
                       <Bar
-                        dataKey="count"
+                        dataKey="score"
                         fill="#3b82f6"
-                        name="Number of Quizzes"
-                        activeBar={{ fill: "#60a5fa" }}
-                        maxBarSize={60}
+                        radius={[8, 8, 0, 0]}
+                        activeBar={{ fillOpacity: 0.6 }}
                       />
                     </BarChart>
                   </ResponsiveContainer>
@@ -459,139 +741,100 @@ export default function Analytics() {
             </Card>
           </div>
 
-          {/* Performance Breakdown */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Performance Pie Chart */}
-            <Card className="lg:col-span-1 pb-8">
-              <CardHeader>
-                <CardTitle>Performance Breakdown</CardTitle>
-                <CardDescription>
-                  Distribution of your quiz grades
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                      <Pie
-                        data={pieData}
-                        cx="50%"
-                        cy="50%"
-                        outerRadius={80}
-                        fill="#8884d8"
-                        dataKey="value"
-                        style={{ fontSize: "14px", fontWeight: "600" }}
+          <Card className="mb-8">
+            <CardHeader>
+              <CardTitle>Score Progression</CardTitle>
+              <CardDescription>
+                Your improvement journey over time
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart
+                    data={lineChartData}
+                    margin={{ top: 20, right: 30, left: 0, bottom: 20 }}
+                  >
+                    <defs>
+                      <linearGradient
+                        id="scoreGradient"
+                        x1="0"
+                        y1="0"
+                        x2="0"
+                        y2="1"
                       >
-                        {pieData.map((entry, index) => (
-                          <Cell
-                            key={`cell-${index}`}
-                            fill={COLORS[index % COLORS.length]}
-                          />
-                        ))}
-                      </Pie>
-                      <Tooltip />
-                      <Legend
-                        verticalAlign="bottom"
-                        height={36}
-                        align="center"
-                        layout="vertical"
-                        wrapperStyle={{
-                          fontSize: "14px",
-                          paddingTop: "5px",
-                          lineHeight: "18px",
-                        }}
-                        formatter={(value, entry) =>
-                          `${value}: ${entry.payload.value}`
-                        }
-                      />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              </CardContent>
-            </Card>
+                        <stop
+                          offset="5%"
+                          stopColor="#10b981"
+                          stopOpacity={0.3}
+                        />
+                        <stop
+                          offset="95%"
+                          stopColor="#10b981"
+                          stopOpacity={0}
+                        />
+                      </linearGradient>
+                    </defs>
 
-            {/* Recent Quizzes */}
-            <Card className="lg:col-span-2 flex flex-col">
-              <CardHeader>
-                <CardTitle>Recent Quiz Results</CardTitle>
-                <CardDescription>Your latest quiz performances</CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                {/* Quiz results list with flex-1 to push pagination down */}
-                <div className="flex flex-col flex-1">
-                  {/* Quiz results list with flex-1 to push pagination down */}
-                  <div className="space-y-3 flex-1">
-                    {paginatedQuizzes.length > 0 ? (
-                      paginatedQuizzes.map((quiz, idx) => (
-                        <div
-                          key={idx}
-                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-3 sm:p-4 rounded-lg border gap-2 sm:gap-4"
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className="flex-shrink-0">
-                              <Badge
-                                variant={
-                                  quiz.score >= 80
-                                    ? "default"
-                                    : quiz.score >= 60
-                                    ? "secondary"
-                                    : "destructive"
-                                }
-                                className="text-sm text-white"
-                              >
-                                {quiz.score}%
-                              </Badge>
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="font-medium truncate sm:whitespace-normal">
-                                {quiz.title}
+                    <XAxis
+                      dataKey="name"
+                      stroke="#6b7280"
+                      label={{
+                        value: "Quiz Number",
+                        position: "insideBottom",
+                        offset: -10,
+                        style: { fontSize: 14, fontWeight: 600 },
+                      }}
+                    />
+                    <YAxis
+                      domain={[0, 100]}
+                      stroke="#6b7280"
+                      label={{
+                        value: "Score (%)",
+                        angle: -90,
+                        position: "insideLeft",
+                        style: { fontSize: 14, fontWeight: 600 },
+                      }}
+                    />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "#1f2937",
+                        border: "1px solid #374151",
+                        borderRadius: "8px",
+                      }}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-background border rounded-lg p-3 shadow-lg">
+                              <p className="font-medium">
+                                {payload[0].payload.name}
                               </p>
                               <p className="text-sm text-muted-foreground">
-                                {new Date(quiz.createdAt).toLocaleDateString()}
-                                <span className="sm:hidden">
-                                  {" "}
-                                  •{" "}
-                                  {new Date(quiz.createdAt).toLocaleTimeString(
-                                    [],
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
-                                </span>
+                                {payload[0].payload.date}
+                              </p>
+                              <p className="text-lg font-bold text-green-500">
+                                {payload[0].value}%
                               </p>
                             </div>
-                          </div>
-                          <div className="hidden sm:block text-right flex-shrink-0">
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(quiz.createdAt).toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <p className="text-center text-muted-foreground">
-                        No quizzes in this time range
-                      </p>
-                    )}
-                  </div>
-
-                  {recentQuizzes.length > itemsPerPage && (
-                    <div className="mt-6 mb-2">
-                      <Pagination
-                        currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
-                        itemsPerPage={itemsPerPage}
-                        totalItems={recentQuizzes.length}
-                        itemName="quizzes"
-                      />
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Area
+                      type="monotone"
+                      dataKey="score"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      fill="url(#scoreGradient)"
+                      dot={{ fill: "#10b981", strokeWidth: 2, r: 5 }}
+                      activeDot={{ r: 7, fill: "#10b981" }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
         </>
       )}
     </div>
